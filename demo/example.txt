@@ -1,0 +1,3 @@
+196 the man walks in a counterclockwise circle.
+100 a person walks backward slowly.
+56 a person does a jump.

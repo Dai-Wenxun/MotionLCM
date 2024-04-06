@@ -1,0 +1,100 @@
+FOLDER: './experiments_t2m'
+TEST_FOLDER: './experiments_t2m_test'
+
+NAME: 'motionlcm_humanml'
+
+TRAIN:
+  DATASETS: ['humanml3d']
+  BATCH_SIZE: 256
+  SPLIT: 'train'
+  NUM_WORKERS: 8
+  PERSISTENT_WORKERS: true
+  SEED_VALUE: 1234
+  PRETRAINED: 'experiments_t2m/mld_humanml/mld_humanml.ckpt'
+
+  validation_steps: -1
+  validation_epochs: 50
+  checkpointing_steps: -1
+  checkpointing_epochs: 50
+  max_train_steps: -1
+  max_train_epochs: 1000
+  learning_rate: 2e-4
+  lr_scheduler: "cosine"
+  lr_warmup_steps: 1000
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_weight_decay: 0.0
+  adam_epsilon: 1e-08
+  max_grad_norm: 1.0
+
+  # Latent Consistency Distillation Specific Arguments
+  w_min: 5.0
+  w_max: 15.0
+  num_ddim_timesteps: 50
+  loss_type: 'huber'
+  huber_c: 0.001
+  unet_time_cond_proj_dim: 256
+  ema_decay: 0.95
+
+EVAL:
+  DATASETS: ['humanml3d']
+  BATCH_SIZE: 32
+  SPLIT: 'test'
+  NUM_WORKERS: 12
+
+TEST:
+  DATASETS: ['humanml3d']
+  BATCH_SIZE: 1
+  SPLIT: 'test'
+  NUM_WORKERS: 12
+
+  CHECKPOINTS: 'experiments_t2m/motionlcm_humanml/motionlcm_humanml.ckpt'
+
+  # Testing Args
+  REPLICATION_TIMES: 20
+  MM_NUM_SAMPLES: 100
+  MM_NUM_REPEATS: 30
+  MM_NUM_TIMES: 10
+  DIVERSITY_TIMES: 300
+
+DATASET:
+  SMPL_PATH: './deps/smpl'
+  WORD_VERTILIZER_PATH: './deps/glove/'
+  HUMANML3D:
+    PICK_ONE_TEXT: true
+    FRAME_RATE: 20.0
+    UNIT_LEN: 4
+    ROOT: './datasets/humanml3d'
+    SPLIT_ROOT: './datasets/humanml3d'
+  SAMPLER:
+    MAX_LEN: 196
+    MIN_LEN: 40
+    MAX_TEXT_LEN: 20
+
+METRIC:
+  DIST_SYNC_ON_STEP: true
+  TYPE: ['TM2TMetrics']
+
+model:
+  target: 'modules'
+  latent_dim: [1, 256]
+  guidance_scale: 7.5
+  guidance_uncondp: 0.0
+  is_controlnet: false
+
+  t2m_textencoder:
+    dim_word: 300
+    dim_pos_ohot: 15
+    dim_text_hidden: 512
+    dim_coemb_hidden: 512
+
+  t2m_motionencoder:
+    dim_move_hidden: 512
+    dim_move_latent: 512
+    dim_motion_hidden: 1024
+    dim_motion_latent: 512
+
+  bert_path: './deps/distilbert-base-uncased'
+  clip_path: './deps/clip-vit-large-patch14'
+  t5_path: './deps/sentence-t5-large'
+  t2m_path: './deps/t2m/'
