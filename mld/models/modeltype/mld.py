@@ -369,7 +369,7 @@ class MLD(BaseModel):
             joints_rst = self.feats2joints(feats_rst)
             joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], -1)
             joints_rst = self.datamodule.norm_spatial(joints_rst)
-            joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], 22, 3)
+            joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], self.njoints, 3)
             hint = batch['hint']
             hint = hint.view(hint.shape[0], hint.shape[1], self.njoints, 3)
             mask_hint = hint.sum(dim=-1, keepdim=True) != 0
@@ -378,12 +378,14 @@ class MLD(BaseModel):
                 if self.vaeloss_type == 'mean':
                     cond_loss = (self.l2_loss(joints_rst, hint) * mask_hint).mean()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
-                elif 'sum' in self.vaeloss_type:
+                elif self.vaeloss_type == 'sum':
                     cond_loss = (self.l2_loss(joints_rst, hint).sum(-1, keepdims=True) * mask_hint).sum() / mask_hint.sum()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
-                else:
+                elif self.vaeloss_type == 'mask':
                     cond_loss = self.masked_l2(joints_rst, hint, mask_hint)
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
+                else:
+                    raise ValueError(f'Unsupported vaeloss_type: {self.vaeloss_type}')
             else:
                 loss_dict['cond_loss'] = torch.tensor(0., device=diff_loss.device)
 
@@ -392,13 +394,15 @@ class MLD(BaseModel):
                 if self.vaeloss_type == 'mean':
                     rot_loss = (self.l2_loss(feats_rst, feats_ref) * mask_rot).mean()
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
-                elif 'sum' in self.vaeloss_type:
+                elif self.vaeloss_type == 'sum':
                     rot_loss = (self.l2_loss(feats_rst, feats_ref).sum(-1, keepdims=True) * mask_rot).sum() / mask_rot.sum()
                     rot_loss = rot_loss / self.nfeats
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
-                else:
+                elif self.vaeloss_type == 'mask':
                     rot_loss = self.masked_l2(feats_rst, feats_ref, mask_rot)
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
+                else:
+                    raise ValueError(f'Unsupported vaeloss_type: {self.vaeloss_type}')
             else:
                 loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
 

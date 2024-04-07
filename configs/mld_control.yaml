@@ -80,7 +80,7 @@ model:
   training_control_joint: [0]
   testing_control_joint: [0]
   training_density: 'random'
-  testing_density: 1
+  testing_density: 100
   control_scale: 1.0
   vaeloss: True
   vaeloss_type: 'sum'
