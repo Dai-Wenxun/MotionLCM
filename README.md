@@ -92,7 +92,7 @@ The parameters required for model training and testing are recorded in the corre
 - `${FOLDER}`: The folder for the specific training task (i.e., `experiments_t2m` and `experiments_control`).
 - `${TEST_FOLDER}`: The folder for the specific testing task (i.e., `experiments_t2m_test` and `experiments_control_test`).
 - `${NAME}`: The name of the model (e.g., `motionlcm_humanml`). `${FOLDER}`, `${NAME}`, and the current timestamp constitute the training output folder (for example, `experiments_t2m/motionlcm_humanml/2024-04-06T23-05-07`). The same applies to `${TEST_FOLDER}` for testing.
-- `${PRETRAINED}`: The path of the pretrained model.
+- `${TRAIN.PRETRAINED}`: The path of the pretrained model.
 - `${TEST.CHECKPOINTS}`: The path of the testing model.
 
 ### 3.1. Ready to train MotionLCM model
