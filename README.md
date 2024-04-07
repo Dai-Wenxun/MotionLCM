@@ -80,7 +80,10 @@ The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timesta
 
 ### 1. Prepare the datasets
 
-Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-to-motion dataset setup.
+Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-to-motion dataset setup. Copy the result dataset to our repository:
+```
+cp -r ../HumanML3D/HumanML3D ./datasets/humanml3d
+```
 
 ### 2. Important args in the config yaml
 
