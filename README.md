@@ -48,8 +48,6 @@ The folders `experiments_t2m` and `experiments_control` store pretrained models 
 
 Visit the [Google Driver](https://drive.google.com/drive/folders/1SIhb6srXWS0PNvZ2fs40QiE3Rk764u6z?usp=sharing) to download the previous dependencies and models.
 
-</details>
-
 ### 5. Prepare the datasets
 
 Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-to-motion dataset setup. Copy the result dataset to our repository:
@@ -89,6 +87,8 @@ MotionLCM
 │       └── motionlcm_humanml.ckpt
 ├── ...
 ```
+
+</details>
 
 ## ▶️ Demo
 
