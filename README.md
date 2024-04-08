@@ -50,6 +50,46 @@ Visit the [Google Driver](https://drive.google.com/drive/folders/1SIhb6srXWS0PNv
 
 </details>
 
+### 5. Prepare the datasets
+
+Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-to-motion dataset setup. Copy the result dataset to our repository:
+```
+cp -r ../HumanML3D/HumanML3D ./datasets/humanml3d
+```
+
+### 6. Folder Structure
+
+After the whole setup pipeline, the folder structure will look like:
+
+```
+MotionLCM
+├── configs
+├── datasets
+│   ├── humanml3d
+│   │   ├── new_joint_vecs
+│   │   ├── new_joints
+│   │   ├── texts
+│   │   ├── Mean.npy
+│   │   ├── Std.npy
+│   │   ├── ...
+│   └── humanml_spatial_norm
+│       ├── Mean_raw.npy
+│       └── Std_raw.npy
+├── deps
+│   ├── glove
+│   ├── sentence-t5-large
+│   └── t2m
+├── experiments_control
+│   └── motionlcm_humanml
+│       └── motionlcm_humanml.ckpt
+├── experiments_t2m
+│   ├── mld_humanml
+│   │   └── mld_humanml.ckpt
+│   └── motionlcm_humanml
+│       └── motionlcm_humanml.ckpt
+├── ...
+```
+
 ## ▶️ Demo
 
 <details>
@@ -78,14 +118,7 @@ The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timesta
 <details>
   <summary><b>Training guidance</b></summary>
 
-### 1. Prepare the datasets
-
-Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-to-motion dataset setup. Copy the result dataset to our repository:
-```
-cp -r ../HumanML3D/HumanML3D ./datasets/humanml3d
-```
-
-### 2. Important args in the config yaml
+### 1. Important args in the config yaml
 
 The parameters required for model training and testing are recorded in the corresponding YAML file (e.g., `configs/motionlcm_t2m.yaml`). Below are some of the important parameters in the file:
 
@@ -95,7 +128,7 @@ The parameters required for model training and testing are recorded in the corre
 - `${TRAIN.PRETRAINED}`: The path of the pretrained model.
 - `${TEST.CHECKPOINTS}`: The path of the testing model.
 
-### 3.1. Ready to train MotionLCM model
+### 2.1. Ready to train MotionLCM model
 
 Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command:
 
@@ -103,7 +136,7 @@ Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the
 python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
 ```
 
-### 3.2. Ready to train motion ControlNet
+### 2.2. Ready to train motion ControlNet
 
 Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the following command:
 
@@ -111,7 +144,7 @@ Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the 
 python -m train_motion_control --cfg configs/motionlcm_control.yaml
 ```
 
-### 4. Evaluate the model
+### 3. Evaluate the model
 
 Text-to-Motion: 
 

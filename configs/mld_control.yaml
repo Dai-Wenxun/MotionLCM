@@ -82,7 +82,7 @@ model:
   training_density: 'random'
   testing_density: 100
   control_scale: 1.0
-  vaeloss: True
+  vaeloss: true
   vaeloss_type: 'sum'
   cond_ratio: 1.0
   rot_ratio: 0.0
