@@ -123,7 +123,7 @@ MotionLCM provides two main functionalities: text-to-motion and motion control. 
   <summary><b> Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
 
 ```
-python demo.py --cfg configs/motionlcm_t2m.yaml --example demo/example.txt --plot
+python demo.py --cfg configs/motionlcm_t2m.yaml --example demo/example.txt
 ```
 </details>
 
