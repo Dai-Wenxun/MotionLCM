@@ -18,8 +18,7 @@ links
 This section provides a quick start guide to set up the environment and run the demo. The following steps will guide you through the installation of the required dependencies, downloading the pretrained models, and preparing the datasets. 
 
 <details>
-  <summary><b> 1. Conda environment</b></summary>
-
+  <summary><b> 1. Conda environment </b></summary>
 
 ```
 conda create python=3.10 --name motionlcm
@@ -37,7 +36,7 @@ We test our code on Python 3.10.12 and PyTorch 1.13.1.
 </details>
 
 <details>
-  <summary><b> 2. Dependencies</b></summary>
+  <summary><b> 2. Dependencies </b></summary>
 
 Run the script to download dependencies materials:
 
@@ -50,8 +49,7 @@ bash prepare/perpare_t5.sh
 </details>
 
 <details>
-  <summary><b> 3. Pretrained models</b></summary>
-
+  <summary><b> 3. Pretrained models </b></summary>
 
 Run the script to download the pretrained models:
 
@@ -65,16 +63,14 @@ The folders `experiments_t2m` and `experiments_control` store pretrained models 
 
 
 <details>
-  <summary><b> 4. (Optional) Download manually</b></summary>
-
-
+  <summary><b> 4. (Optional) Download manually </b></summary>
 
 Visit the [Google Driver](https://drive.google.com/drive/folders/1SIhb6srXWS0PNvZ2fs40QiE3Rk764u6z?usp=sharing) to download the previous dependencies and models.
 
 </details>
 
 <details>
-  <summary><b>5. Prepare the datasets</b></summary>
+  <summary><b> 5. Prepare the datasets </b></summary>
 
 Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-to-motion dataset setup. Copy the result dataset to our repository:
 ```
@@ -83,10 +79,8 @@ cp -r ../HumanML3D/HumanML3D ./datasets/humanml3d
 
 </details>
 
-
 <details>
-  <summary><b>6. Folder Structure</b></summary>
-
+  <summary><b> 6. Folder Structure </b></summary>
 
 After the whole setup pipeline, the folder structure will look like:
 
@@ -119,16 +113,14 @@ MotionLCM
 ├── ...
 ```
 
-
 </details>
 
 ## 🎬 Demo
 
-
-MotionLCM provides two main functionalities: text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions based on the provided prompts and lengths.
+MotionLCM provides two main functionalities: text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions.
 
 <details>
-  <summary><b>Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
+  <summary><b> Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
 
 ```
 python demo.py --cfg configs/motionlcm_t2m.yaml --example demo/example.txt --plot
@@ -136,33 +128,30 @@ python demo.py --cfg configs/motionlcm_t2m.yaml --example demo/example.txt --plo
 </details>
 
 <details>
-  <summary><b>Text-to-Motion (using prompts from HumanML3D test set)</b></summary>
+  <summary><b> Text-to-Motion (using prompts from HumanML3D test set) </b></summary>
 
 ```
-python demo.py --cfg configs/motionlcm_t2m.yaml --plot
+python demo.py --cfg configs/motionlcm_t2m.yaml
 ```
 </details>
 
 <details>
-  <summary><b>Motion Control (using prompts and trajectory from HumanML3D test set)</b></summary>
+  <summary><b> Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
 
 ```
-python demo.py --cfg configs/motionlcm_control --plot
+python demo.py --cfg configs/motionlcm_control
 ```
 
 The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
 
 </details>
 
-
-
 ## 🚀 Train your own models
 
 We provide the training guidance for both text-to-motion and motion control tasks. The following steps will guide you through the training process.
 
 <details>
-  <summary><b>1. Important args in the config yaml</b></summary>
-
+  <summary><b> 1. Important args in the config yaml </b></summary>
 
 The parameters required for model training and testing are recorded in the corresponding YAML file (e.g., `configs/motionlcm_t2m.yaml`). Below are some of the important parameters in the file:
 
@@ -172,12 +161,10 @@ The parameters required for model training and testing are recorded in the corre
 - `${TRAIN.PRETRAINED}`: The path of the pretrained model.
 - `${TEST.CHECKPOINTS}`: The path of the testing model.
 
-
 </details>
 
-
 <details>
-  <summary><b>2. Train MotionLCM and ControlNet</b></summary>
+  <summary><b> 2. Train MotionLCM and ControlNet </b></summary>
 
 #### 2.1. Ready to train MotionLCM model
 
@@ -197,10 +184,8 @@ python -m train_motion_control --cfg configs/motionlcm_control.yaml
 
 </details>
 
-
 <details>
-  <summary><b>3. Evaluate the model</b></summary>
-
+  <summary><b> 3. Evaluate the model </b></summary>
 
 Text-to-Motion: 
 
@@ -215,7 +200,6 @@ python -m test --cfg configs/motionlcm_control.yaml
 ```
 
 </details>
-
 
 ## 📊 Results
 
