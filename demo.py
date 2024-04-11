@@ -1,4 +1,5 @@
 import os
+import pickle
 import sys
 import datetime
 import logging
@@ -81,64 +82,68 @@ def main():
             logger.info(f"{l}: {t}")
 
         batch = {"length": length, "text": text}
-        with torch.no_grad():
-            joints, _ = model(batch)
 
-        num_samples = len(joints)
-        batch_id = 0
-        for i in range(num_samples):
-            res = dict()
-            pkl_path = osp.join(output_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}.pkl")
-            res['joints'] = joints[i].detach().cpu().numpy()
-            res['text'] = text[i]
-            res['length'] = length[i]
-            res['hint'] = None
-            torch.save(res, pkl_path)
-            logger.info(f"Motions are generated here:\n{pkl_path}")
-
-            if cfg.plot:
-                plot_3d_motion(pkl_path.replace('.pkl', '.mp4'),
-                               joints[i].detach().cpu().numpy(), text[i], fps=20)
-
-    else:
-        test_dataloader = datasets.test_dataloader()
-        for batch_id, batch in enumerate(test_dataloader):
-            batch = move_batch_to_device(batch, device)
+        for rep_i in range(cfg.replication):
             with torch.no_grad():
-                joints, joints_ref = model(batch)
+                joints, _ = model(batch)
+
             num_samples = len(joints)
-
-            text = batch['text']
-            length = batch['length']
-
-            if 'hint' in batch:
-                hint = batch['hint']
-                mask_hint = hint.view(hint.shape[0], hint.shape[1], model.njoints, 3).sum(dim=-1, keepdim=True) != 0
-                hint = model.datamodule.denorm_spatial(hint)
-                hint = hint.view(hint.shape[0], hint.shape[1], model.njoints, 3) * mask_hint
-                hint = remove_padding(hint, lengths=length)
-            else:
-                hint = None
-
+            batch_id = 0
             for i in range(num_samples):
                 res = dict()
-                pkl_path = osp.join(output_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}.pkl")
+                pkl_path = osp.join(output_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
                 res['joints'] = joints[i].detach().cpu().numpy()
                 res['text'] = text[i]
                 res['length'] = length[i]
-                res['hint'] = hint[i].detach().cpu().numpy() if hint is not None else None
-                torch.save(res, pkl_path)
+                res['hint'] = None
+                with open(pkl_path, 'wb') as f:
+                    pickle.dump(res, f)
                 logger.info(f"Motions are generated here:\n{pkl_path}")
 
-                res['joints'] = joints_ref[i].detach().cpu().numpy()
-                torch.save(res, pkl_path.replace('.pkl', '_ref.pkl'))
-                logger.info(f"Motions are generated here:\n{pkl_path.replace('.pkl', '_ref.pkl')}")
+                if not cfg.no_plot:
+                    plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(), text[i], fps=20)
 
-                if cfg.plot:
-                    plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(),
-                                   text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
-                    plot_3d_motion(pkl_path.replace('.pkl', '_ref.mp4'), joints_ref[i].detach().cpu().numpy(),
-                                   text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
+    else:
+        test_dataloader = datasets.test_dataloader()
+        for rep_i in range(cfg.replication):
+            for batch_id, batch in enumerate(test_dataloader):
+                batch = move_batch_to_device(batch, device)
+                with torch.no_grad():
+                    joints, joints_ref = model(batch)
+
+                num_samples = len(joints)
+                text = batch['text']
+                length = batch['length']
+                if 'hint' in batch:
+                    hint = batch['hint']
+                    mask_hint = hint.view(hint.shape[0], hint.shape[1], model.njoints, 3).sum(dim=-1, keepdim=True) != 0
+                    hint = model.datamodule.denorm_spatial(hint)
+                    hint = hint.view(hint.shape[0], hint.shape[1], model.njoints, 3) * mask_hint
+                    hint = remove_padding(hint, lengths=length)
+                else:
+                    hint = None
+
+                for i in range(num_samples):
+                    res = dict()
+                    pkl_path = osp.join(output_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
+                    res['joints'] = joints[i].detach().cpu().numpy()
+                    res['text'] = text[i]
+                    res['length'] = length[i]
+                    res['hint'] = hint[i].detach().cpu().numpy() if hint is not None else None
+                    with open(pkl_path, 'wb') as f:
+                        pickle.dump(res, f)
+                    logger.info(f"Motions are generated here:\n{pkl_path}")
+
+                    res['joints'] = joints_ref[i].detach().cpu().numpy()
+                    with open(pkl_path.replace('.pkl', '_ref.pkl'), 'wb') as f:
+                        pickle.dump(res, f)
+                    logger.info(f"Motions are generated here:\n{pkl_path.replace('.pkl', '_ref.pkl')}")
+
+                    if not cfg.no_plot:
+                        plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(),
+                                       text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
+                        plot_3d_motion(pkl_path.replace('.pkl', '_ref.mp4'), joints_ref[i].detach().cpu().numpy(),
+                                       text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
 
 
 if __name__ == "__main__":
