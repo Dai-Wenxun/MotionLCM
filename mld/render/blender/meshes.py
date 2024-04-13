@@ -2,15 +2,15 @@ import numpy as np
 
 from .materials import body_material
 
-# Oranges
+# Orange
 GEN_SMPL = body_material(0.658, 0.214, 0.0114)
 # Green
 GT_SMPL = body_material(0.035, 0.415, 0.122)
 
 
 class Meshes:
-    def __init__(self, data, gt, mode, faces_path, always_on_floor, oldrender=True):
-        data = prepare_meshes(data, always_on_floor=always_on_floor)
+    def __init__(self, data, gt, mode, trajectory, faces_path, always_on_floor, oldrender=True):
+        data, trajectory = prepare_meshes(data, trajectory, always_on_floor=always_on_floor)
 
         self.faces = np.load(faces_path)
         print(faces_path)
@@ -19,7 +19,8 @@ class Meshes:
         self.oldrender = oldrender
 
         self.N = len(data)
-        self.trajectory = data[:, :, [0, 1]].mean(1)
+        # self.trajectory = data[:, :, [0, 1]].mean(1)
+        self.trajectory = trajectory
 
         if gt:
             self.mat = GT_SMPL
@@ -58,15 +59,24 @@ class Meshes:
         return self.N
 
 
-def prepare_meshes(data, always_on_floor=False):
+def prepare_meshes(data, trajectory, always_on_floor=False):
     # Swap axis (gravity=Z instead of Y)
     data = data[..., [2, 0, 1]]
 
+    if trajectory is not None:
+        trajectory = trajectory[..., [2, 0, 1]]
+        mask = trajectory.sum(-1) != 0
+        trajectory = trajectory[mask]
+
     # Remove the floor
-    data[..., 2] -= data[..., 2].min()
+    height_offset = data[..., 2].min()
+    data[..., 2] -= height_offset
+
+    if trajectory is not None:
+        trajectory[..., 2] -= height_offset
 
     # Put all the body on the floor
     if always_on_floor:
         data[..., 2] -= data[..., 2].min(1)[:, None]
 
-    return data
+    return data, trajectory

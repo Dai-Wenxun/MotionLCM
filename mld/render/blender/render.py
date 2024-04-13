@@ -4,7 +4,7 @@ import shutil
 import bpy
 
 from .camera import Camera
-from .floor import plot_floor
+from .floor import plot_floor, show_trajectory
 from .sampler import get_frameidx
 from .scene import setup_scene
 from .tools import delete_objs
@@ -73,15 +73,15 @@ def render(npydata, trajectory, path, mode, faces_path, gt=False,
         npydata = prune_begin_end(npydata, perc)
 
     from .meshes import Meshes
-    data = Meshes(npydata, gt=gt, mode=mode,
-                  faces_path=faces_path,
-                  always_on_floor=always_on_floor)
+    data = Meshes(npydata, gt=gt, mode=mode, trajectory=trajectory,
+                  faces_path=faces_path, always_on_floor=always_on_floor)
 
     # Number of frames possible to render
     nframes = len(data)
 
     # Show the trajectory
-    # show_traj(trajectory[..., [2, 0, 1]])
+    if trajectory is not None:
+        show_trajectory(data.trajectory)
 
     # Create a floor
     plot_floor(data.data, big_plane=False)

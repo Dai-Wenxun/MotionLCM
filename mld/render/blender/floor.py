@@ -39,3 +39,29 @@ def plot_floor(data, big_plane=True):
         obj.name = "BigPlane"
         obj.data.name = "BigPlane"
         obj.active_material = floor_mat(color=(0.2, 0.2, 0.2, 1))
+
+
+def show_trajectory(coords):
+    curveData = bpy.data.curves.new('myCurve', type='CURVE')
+    curveData.dimensions = '3D'
+    curveData.resolution_u = 2
+    # map coords to spline
+    polyline = curveData.splines.new('POLY')
+    polyline.points.add(len(coords)-1)
+
+    for i, coord in enumerate(coords):
+        x, y, z = coord
+        polyline.points[i].co = (x, y, z, 1)
+    # Set the color of the curve
+    # create Object
+    curveOB = bpy.data.objects.new('myCurve', curveData)
+    curveData.bevel_depth = 0.03
+    mat = bpy.data.materials.new(name='mat_0')
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes['Principled BSDF']
+    bsdf.distribution = 'MULTI_GGX'
+    bsdf.subsurface_method = 'RANDOM_WALK'
+    bsdf.inputs['Base Color'].default_value = (0.2, 0.6274509803921569, 0.17254901960784313) + (1.0,)
+    bsdf.inputs['Roughness'].default_value = 0.9
+    curveData.materials.append(mat)
+    bpy.context.collection.objects.link(curveOB)
