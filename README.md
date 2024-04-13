@@ -166,12 +166,12 @@ To create SMPL meshes for a specific pickle file, let's use `assets/example.pkl`
 python fit.py --pkl assets/example.pkl
 ```
 
-The SMPL meshes will be stored in `assets/example_mesh.pkl` as a numpy array with the shape `(num_frames, 6890, 3)`.
+The SMPL meshes (numpy array) will be stored in `assets/example_mesh.pkl` with the shape `(num_frames, 6890, 3)`.
 
-You can also fit the entire folder of pickle files. The code will retrieve all files ending with `.pkl` and filter out those ending with `_mesh.pkl`.
+You can also fit all pickle files within a folder. The code will traverse all `.pkl` files in the directory and filter out files that have already been fitted.
 
 ```
-python fit.py --pkl assets/
+python fit.py --dir assets/
 ```
 
 #### 4.2 Render SMPL meshes
@@ -188,8 +188,7 @@ YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/exampl
 
 You will get a rendered image of `num=8` keyframes as shown in `assets/example_mesh.png`. The darker the color, the later the time.
 
-![example](assets/example_mesh_show.png)
-
+<img src="assets/example_mesh_show.png" alt="example" width="50%">
 
 For `video` mode:
 
@@ -209,7 +208,7 @@ YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/exampl
 
 You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the middle frame) as shown in `assets/example_mesh_0.5.png`.
 
-![example](assets/example_mesh_0.5_show.png)
+<img src="assets/example_mesh_0.5_show.png" alt="example" width="50%">
 
 </details>
 
