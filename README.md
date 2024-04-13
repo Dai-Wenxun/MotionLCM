@@ -158,7 +158,8 @@ To record the necessary information about the generated motion, a pickle file wi
 - `length`: The length of the generated motion.
 - `hint`: The trajectory for motion control (optional).
 
-#### 4.1 Create SMPL meshes
+<details>
+  <summary><b> 4.1 Create SMPL meshes </b></summary>
 
 To create SMPL meshes for a specific pickle file, let's use `assets/example.pkl` as an example:
 
@@ -174,12 +175,14 @@ You can also fit all pickle files within a folder. The code will traverse all `.
 python fit.py --dir assets/
 ```
 
-#### 4.2 Render SMPL meshes
+</details>
+
+<details>
+  <summary><b> 4.2 Render SMPL meshes </b></summary>
 
 Refer to [TEMOS-Rendering motions](https://github.com/Mathux/TEMOS) for blender setup (only **Installation** section). 
 
 We support three rendering modes for SMPL mesh, namely `sequence` (default), `video` and `frame`.
-
 
 <details>
   <summary><b> 4.2.1 sequence </b></summary>
@@ -217,6 +220,8 @@ YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/exampl
 You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the middle frame) as shown in `assets/example_mesh_0.5.png`.
 
 <img src="assets/example_mesh_0.5_show.png" alt="example" width="25%">
+
+</details>
 
 </details>
 
