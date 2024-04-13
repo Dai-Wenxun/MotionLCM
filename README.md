@@ -153,7 +153,7 @@ After running the demo, the output folder will store the stick figure animation 
 
 To record the necessary information about the generated motion, a pickle file with the following keys will be saved simultaneously (e.g., `assets/example.pkl`):
 
-- `joints`: The XYZ positions of the generated motion stored as a numpy array with a shape of `(num_frames, njoints, 3)`.
+- `joints`: The XYZ positions of the generated motion (numpy array) with the shape of `(num_frames, njoints, 3)`.
 - `text`: The text prompt.
 - `length`: The length of the generated motion.
 - `hint`: The trajectory for motion control (optional).
