@@ -117,7 +117,7 @@ MotionLCM
 
 ## 🎬 Demo
 
-MotionLCM provides two main functionalities: text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions.
+MotionLCM provides two main functionalities: text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions. The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
 
 <details>
   <summary><b> 1. Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
@@ -143,8 +143,6 @@ python demo.py --cfg configs/motionlcm_control.yaml
 ```
 
 </details>
-
-The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
 
 <details>
   <summary><b> 4. Render SMPL </b></summary>
