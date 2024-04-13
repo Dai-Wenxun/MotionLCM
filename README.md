@@ -139,7 +139,7 @@ python demo.py --cfg configs/motionlcm_t2m.yaml
   <summary><b> Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
 
 ```
-python demo.py --cfg configs/motionlcm_control
+python demo.py --cfg configs/motionlcm_control.yaml
 ```
 
 The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
