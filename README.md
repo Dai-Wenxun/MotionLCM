@@ -153,7 +153,7 @@ After running the demo, the output folder will store the stick figure animation 
 
 To record the necessary information about the generated motion, a pickle file with the following keys will be saved simultaneously (e.g., `assets/example.pkl`):
 
-- `joints (numpy.ndarray)`: The XYZ positions of the generated motion with the shape of `(num_frames, njoints, 3)`.
+- `joints (numpy.ndarray)`: The XYZ positions of the generated motion with the shape of `(nframes, njoints, 3)`.
 - `text (str)`: The text prompt.
 - `length (int)`: The length of the generated motion.
 - `hint (numpy.ndarray)`: The trajectory for motion control (optional).
@@ -167,7 +167,7 @@ To create SMPL meshes for a specific pickle file, let's use `assets/example.pkl`
 python fit.py --pkl assets/example.pkl
 ```
 
-The SMPL meshes (numpy array) will be stored in `assets/example_mesh.pkl` with the shape `(num_frames, 6890, 3)`.
+The SMPL meshes (numpy array) will be stored in `assets/example_mesh.pkl` with the shape `(nframes, 6890, 3)`.
 
 You can also fit all pickle files within a folder. The code will traverse all `.pkl` files in the directory and filter out files that have already been fitted.
 
