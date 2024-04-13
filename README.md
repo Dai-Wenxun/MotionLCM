@@ -180,7 +180,9 @@ Refer to [TEMOS-Rendering motions](https://github.com/Mathux/TEMOS) for blender 
 
 We support three rendering modes for SMPL mesh, namely `sequence` (default), `video` and `frame`.
 
-For `sequence` mode:
+
+<details>
+  <summary><b> 4.2.1 sequence </b></summary>
 
 ```
 YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode sequence --num 8
@@ -190,7 +192,10 @@ You will get a rendered image of `num=8` keyframes as shown in `assets/example_m
 
 <img src="assets/example_mesh_show.png" alt="example" width="30%">
 
-For `video` mode:
+</details>
+
+<details>
+  <summary><b> 4.2.2 video </b></summary>
 
 ```
 YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode video --fps 20
@@ -200,7 +205,10 @@ You will get a rendered video with `fps=20` as shown in `assets/example_mesh.mp4
 
 ![example](assets/example_mesh_show.gif)
 
-For `frame` mode:
+</details>
+
+<details>
+  <summary><b> 4.2.3 frame </b></summary>
 
 ```
 YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode frame --exact_frame 0.5
@@ -209,6 +217,8 @@ YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/exampl
 You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the middle frame) as shown in `assets/example_mesh_0.5.png`.
 
 <img src="assets/example_mesh_0.5_show.png" alt="example" width="25%">
+
+</details>
 
 </details>
 
