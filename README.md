@@ -188,7 +188,7 @@ YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/exampl
 
 You will get a rendered image of `num=8` keyframes as shown in `assets/example_mesh.png`. The darker the color, the later the time.
 
-<img src="assets/example_mesh_show.png" alt="example" width="50%">
+<img src="assets/example_mesh_show.png" alt="example" width="30%">
 
 For `video` mode:
 
@@ -208,7 +208,7 @@ YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/exampl
 
 You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the middle frame) as shown in `assets/example_mesh_0.5.png`.
 
-<img src="assets/example_mesh_0.5_show.png" alt="example" width="50%">
+<img src="assets/example_mesh_0.5_show.png" alt="example" width="25%">
 
 </details>
 
