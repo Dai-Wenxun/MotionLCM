@@ -41,7 +41,9 @@ def main():
 
     name_time_str = osp.join(cfg.NAME, "demo_" + datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S"))
     output_dir = osp.join(cfg.TEST_FOLDER, name_time_str)
+    vis_dir = osp.join(output_dir, 'samples')
     os.makedirs(output_dir, exist_ok=False)
+    os.makedirs(vis_dir, exist_ok=False)
 
     steam_handler = logging.StreamHandler(sys.stdout)
     file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))
@@ -91,7 +93,7 @@ def main():
             batch_id = 0
             for i in range(num_samples):
                 res = dict()
-                pkl_path = osp.join(output_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
+                pkl_path = osp.join(vis_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
                 res['joints'] = joints[i].detach().cpu().numpy()
                 res['text'] = text[i]
                 res['length'] = length[i]
@@ -125,7 +127,7 @@ def main():
 
                 for i in range(num_samples):
                     res = dict()
-                    pkl_path = osp.join(output_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
+                    pkl_path = osp.join(vis_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
                     res['joints'] = joints[i].detach().cpu().numpy()
                     res['text'] = text[i]
                     res['length'] = length[i]
@@ -134,16 +136,18 @@ def main():
                         pickle.dump(res, f)
                     logger.info(f"Motions are generated here:\n{pkl_path}")
 
-                    res['joints'] = joints_ref[i].detach().cpu().numpy()
-                    with open(pkl_path.replace('.pkl', '_ref.pkl'), 'wb') as f:
-                        pickle.dump(res, f)
-                    logger.info(f"Motions are generated here:\n{pkl_path.replace('.pkl', '_ref.pkl')}")
-
                     if not cfg.no_plot:
                         plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(),
                                        text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
-                        plot_3d_motion(pkl_path.replace('.pkl', '_ref.mp4'), joints_ref[i].detach().cpu().numpy(),
-                                       text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
+
+                    if rep_i == 0:
+                        res['joints'] = joints_ref[i].detach().cpu().numpy()
+                        with open(pkl_path.replace('.pkl', '_ref.pkl'), 'wb') as f:
+                            pickle.dump(res, f)
+                        logger.info(f"Motions are generated here:\n{pkl_path.replace('.pkl', '_ref.pkl')}")
+                        if not cfg.no_plot:
+                            plot_3d_motion(pkl_path.replace('.pkl', '_ref.mp4'), joints_ref[i].detach().cpu().numpy(),
+                                           text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
 
 
 if __name__ == "__main__":

@@ -12,3 +12,4 @@ h5py==3.11.0
 smplx==0.1.28
 chumpy==0.70
 numpy==1.23.0
+natsort==8.4.0
