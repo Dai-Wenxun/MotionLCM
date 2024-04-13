@@ -68,9 +68,9 @@ def render(npydata, trajectory, path, mode, faces_path, gt=False,
     # remove X% of beginning and end
     # as it is almost always static
     # in this part
-    if mode == "sequence":
-        perc = 0.2
-        npydata = prune_begin_end(npydata, perc)
+    # if mode == "sequence":
+    #     perc = 0.2
+    #     npydata = prune_begin_end(npydata, perc)
 
     from .meshes import Meshes
     data = Meshes(npydata, gt=gt, mode=mode, trajectory=trajectory,

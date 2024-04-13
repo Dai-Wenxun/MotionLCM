@@ -39,6 +39,7 @@ for path in paths:
     # load joints
     if os.path.exists(path.replace('.pkl', '_mesh.pkl')):
         print(f"{path} is rendered! skip!")
+        continue
 
     with open(path, 'rb') as f:
         data = pickle.load(f)
@@ -130,4 +131,4 @@ for path in paths:
     save_file = path.replace('.pkl', '_mesh.pkl')
     with open(save_file, 'wb') as f:
         pickle.dump(data, f)
-    print(f'vertices saved in {path}')
+    print(f'vertices saved in {save_file}')

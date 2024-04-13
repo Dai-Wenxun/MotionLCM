@@ -120,15 +120,15 @@ MotionLCM
 MotionLCM provides two main functionalities: text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions.
 
 <details>
-  <summary><b> Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
+  <summary><b> 1. Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
 
 ```
-python demo.py --cfg configs/motionlcm_t2m.yaml --example demo/example.txt
+python demo.py --cfg configs/motionlcm_t2m.yaml --example assets/example.txt
 ```
 </details>
 
 <details>
-  <summary><b> Text-to-Motion (using prompts from HumanML3D test set) </b></summary>
+  <summary><b> 2. Text-to-Motion (using prompts from HumanML3D test set) </b></summary>
 
 ```
 python demo.py --cfg configs/motionlcm_t2m.yaml
@@ -136,13 +136,82 @@ python demo.py --cfg configs/motionlcm_t2m.yaml
 </details>
 
 <details>
-  <summary><b> Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
+  <summary><b> 3. Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
 
 ```
 python demo.py --cfg configs/motionlcm_control.yaml
 ```
 
+</details>
+
 The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
+
+<details>
+  <summary><b> 4. Render SMPL </b></summary>
+
+After running the demo, the output folder will store the stick figure animation for each generated motion (e.g., `assets/example.gif`).
+
+![example](assets/example.gif)
+
+To record the necessary information about the generated motion, a pickle file with the following keys will be saved simultaneously (e.g., `assets/example.pkl`):
+
+- `joints`: The XYZ positions of the generated motion stored as a numpy array with a shape of `(num_frames, njoints, 3)`.
+- `text`: The text prompt.
+- `length`: The length of the generated motion.
+- `hint`: The trajectory for motion control (optional).
+
+#### 4.1 Create SMPL meshes
+
+To create SMPL meshes for a specific pickle file, let's use `assets/example.pkl` as an example:
+
+```
+python fit.py --pkl assets/example.pkl
+```
+
+The SMPL meshes will be stored in `assets/example_mesh.pkl` as a numpy array with the shape `(num_frames, 6890, 3)`.
+
+You can also fit the entire folder of pickle files. The code will retrieve all files ending with `.pkl` and filter out those ending with `_mesh.pkl`.
+
+```
+python fit.py --pkl assets/
+```
+
+#### 4.2 Render SMPL meshes
+
+Refer to [TEMOS-Rendering motions](https://github.com/Mathux/TEMOS) for blender setup (only **Installation** section). 
+
+We support three rendering modes for SMPL mesh, namely `sequence` (default), `video` and `frame`.
+
+For `sequence` mode:
+
+```
+YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode sequence --num 8
+```
+
+You will get a rendered image of `num=8` keyframes as shown in `assets/example_mesh.png`. The darker the color, the later the time.
+
+![example](assets/example_mesh_show.png)
+
+
+For `video` mode:
+
+```
+YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode video --fps 20
+```
+
+You will get a rendered video with `fps=20` as shown in `assets/example_mesh.mp4`.
+
+![example](assets/example_mesh_show.gif)
+
+For `frame` mode:
+
+```
+YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode frame --exact_frame 0.5
+```
+
+You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the middle frame) as shown in `assets/example_mesh_0.5.png`.
+
+![example](assets/example_mesh_0.5_show.png)
 
 </details>
 
