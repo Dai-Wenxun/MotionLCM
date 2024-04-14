@@ -220,8 +220,7 @@ class Text2MotionDatasetV2(data.Dataset):
         data = self.data_dict[self.name_list[idx]]
         motion, m_length, text_list = data["motion"], data["length"], data["text"]
         # Randomly select a caption
-        # text_data = random.choice(text_list)
-        text_data = text_list[0]
+        text_data = random.choice(text_list)
         caption, tokens = text_data["caption"], text_data["tokens"]
 
         if len(tokens) < self.max_text_len:
@@ -250,7 +249,6 @@ class Text2MotionDatasetV2(data.Dataset):
         else:
             coin2 = "single"
 
-        coin2 = 'single'
         if coin2 == "double":
             m_length = (m_length // self.unit_length - 1) * self.unit_length
         elif coin2 == "single":
