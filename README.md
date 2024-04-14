@@ -102,6 +102,7 @@ MotionLCM
 ├── deps
 │   ├── glove
 │   ├── sentence-t5-large
+|   ├── smpl_models
 │   └── t2m
 ├── experiments_control
 │   ├── mld_humanml
