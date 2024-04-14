@@ -40,7 +40,7 @@ TEST:
   SPLIT: 'test'
   NUM_WORKERS: 12
 
-  CHECKPOINTS: ''
+  CHECKPOINTS: 'experiments_control/mld_humanml/mld_humanml.ckpt'
 
   # Testing Args
   REPLICATION_TIMES: 1
