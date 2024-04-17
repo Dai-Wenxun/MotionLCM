@@ -1,8 +1,5 @@
-from typing import List
-
-import torch
-from torch import Tensor
 from torchmetrics import Metric
+from torchmetrics.utilities import dim_zero_cat
 
 from .utils import *
 
@@ -67,9 +64,9 @@ class TM2TMetrics(Metric):
         self.metrics.extend(["Diversity", "gt_Diversity"])
 
         # cached batches
-        self.add_state("text_embeddings", default=[], dist_reduce_fx=None)
-        self.add_state("recmotion_embeddings", default=[], dist_reduce_fx=None)
-        self.add_state("gtmotion_embeddings", default=[], dist_reduce_fx=None)
+        self.add_state("text_embeddings", default=[], dist_reduce_fx='cat')
+        self.add_state("recmotion_embeddings", default=[], dist_reduce_fx='cat')
+        self.add_state("gtmotion_embeddings", default=[], dist_reduce_fx='cat')
 
     def compute(self) -> dict:
         count_seq = self.count_seq.item()
@@ -79,9 +76,9 @@ class TM2TMetrics(Metric):
 
         # cat all embeddings
         shuffle_idx = torch.randperm(count_seq)
-        all_texts = torch.cat(self.text_embeddings, axis=0).cpu()[shuffle_idx, :]
-        all_genmotions = torch.cat(self.recmotion_embeddings, axis=0).cpu()[shuffle_idx, :]
-        all_gtmotions = torch.cat(self.gtmotion_embeddings, axis=0).cpu()[shuffle_idx, :]
+        all_texts = dim_zero_cat(self.text_embeddings, axis=0).cpu()[shuffle_idx, :]
+        all_genmotions = dim_zero_cat(self.recmotion_embeddings, axis=0).cpu()[shuffle_idx, :]
+        all_gtmotions = dim_zero_cat(self.gtmotion_embeddings, axis=0).cpu()[shuffle_idx, :]
 
         # Compute r-precision
         assert count_seq > self.R_size
@@ -95,8 +92,8 @@ class TM2TMetrics(Metric):
             dist_mat = euclidean_distance_matrix(group_texts, group_motions).nan_to_num()
             # print(dist_mat[:5])
             self.Matching_score += dist_mat.trace()
-            argsmax = torch.argsort(dist_mat, dim=1)
-            top_k_mat += calculate_top_k(argsmax, top_k=self.top_k).sum(axis=0)
+            argmax = torch.argsort(dist_mat, dim=1)
+            top_k_mat += calculate_top_k(argmax, top_k=self.top_k).sum(axis=0)
         R_count = count_seq // self.R_size * self.R_size
         metrics["Matching_score"] = self.Matching_score / R_count
         for k in range(self.top_k):
@@ -114,8 +111,8 @@ class TM2TMetrics(Metric):
             dist_mat = euclidean_distance_matrix(group_texts, group_motions).nan_to_num()
             # match score
             self.gt_Matching_score += dist_mat.trace()
-            argsmax = torch.argsort(dist_mat, dim=1)
-            top_k_mat += calculate_top_k(argsmax, top_k=self.top_k).sum(axis=0)
+            argmax = torch.argsort(dist_mat, dim=1)
+            top_k_mat += calculate_top_k(argmax, top_k=self.top_k).sum(axis=0)
         metrics["gt_Matching_score"] = self.gt_Matching_score / R_count
         for k in range(self.top_k):
             metrics[f"gt_R_precision_top_{str(k + 1)}"] = top_k_mat[k] / R_count

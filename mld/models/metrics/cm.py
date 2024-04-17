@@ -1,7 +1,6 @@
-import numpy as np
-
 import torch
 from torchmetrics import Metric
+from torchmetrics.utilities import dim_zero_cat
 
 from mld.utils.temos_utils import remove_padding
 from .utils import calculate_skating_ratio, calculate_trajectory_error, control_l2
@@ -17,7 +16,7 @@ class ControlMetrics(Metric):
         self.add_state("count_seq", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("skate_ratio_sum", default=torch.tensor(0.), dist_reduce_fx="sum")
         self.add_state("dist_sum", default=torch.tensor(0.), dist_reduce_fx="sum")
-        self.add_state("traj_err", default=[], dist_reduce_fx=None)
+        self.add_state("traj_err", default=[], dist_reduce_fx="cat")
         self.traj_err_key = ["traj_fail_20cm", "traj_fail_50cm", "kps_fail_20cm", "kps_fail_50cm", "kps_mean_err(m)"]
 
     def compute(self) -> dict:
@@ -26,10 +25,10 @@ class ControlMetrics(Metric):
         metrics = dict()
         metrics['Skating Ratio'] = self.skate_ratio_sum / count_seq
         metrics['Control L2 dist'] = self.dist_sum / count_seq
-        traj_err = np.stack(self.traj_err).mean(0)
+        traj_err = dim_zero_cat(self.traj_err).mean(0)
 
         for (k, v) in zip(self.traj_err_key, traj_err):
-            metrics[k] = torch.tensor(v)
+            metrics[k] = v
 
         return {**metrics}
 
@@ -42,15 +41,15 @@ class ControlMetrics(Metric):
             skate_ratio, _ = calculate_skating_ratio(j.unsqueeze(0).permute(0, 2, 3, 1))
             self.skate_ratio_sum += skate_ratio[0]
 
-        joints = joints.cpu().numpy()
-        hint = hint.cpu().numpy()
-        mask_hint = mask_hint.cpu().numpy()
+        joints_np = joints.cpu().numpy()
+        hint_np = hint.cpu().numpy()
+        mask_hint_np = mask_hint.cpu().numpy()
 
-        for j, h, m in zip(joints, hint, mask_hint):
+        for j, h, m in zip(joints_np, hint_np, mask_hint_np):
             control_error = control_l2(j[None], h[None], m[None])
             mean_error = control_error.sum() / m.sum()
             self.dist_sum += mean_error
             control_error = control_error.reshape(-1)
             m = m.reshape(-1)
             err_np = calculate_trajectory_error(control_error, mean_error, m)
-            self.traj_err.append(err_np)
+            self.traj_err.append(torch.tensor(err_np[None], device=joints.device))

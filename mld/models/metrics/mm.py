@@ -1,5 +1,6 @@
 import torch
 from torchmetrics import Metric
+from torchmetrics.utilities import dim_zero_cat
 
 from .utils import calculate_multimodality_np
 
@@ -24,14 +25,14 @@ class MMMetrics(Metric):
                        dist_reduce_fx="sum")
 
         # cached batches
-        self.add_state("mm_motion_embeddings", default=[], dist_reduce_fx=None)
+        self.add_state("mm_motion_embeddings", default=[], dist_reduce_fx='cat')
 
     def compute(self) -> dict:
         # init metrics
         metrics = {metric: getattr(self, metric) for metric in self.metrics}
 
         # cat all embeddings
-        all_mm_motions = torch.cat(self.mm_motion_embeddings, axis=0).cpu().numpy()
+        all_mm_motions = dim_zero_cat(self.mm_motion_embeddings).cpu().numpy()
         metrics['MultiModality'] = calculate_multimodality_np(
             all_mm_motions, self.mm_num_times)
 
