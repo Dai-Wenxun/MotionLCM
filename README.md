@@ -1,13 +1,37 @@
 # MotionLCM: Real-time Controllable Motion Generation via Latent Consistency Model
 
+[Wenxun Dai](https://github.com/Dai-Wenxun)<sup>😎</sup>, [Ling-Hao Chen](https://lhchen.top)<sup>😎</sup>, [Jingbo Wang](https://wangjingbo1219.github.io)<sup>🥳$*$</sup>, [Jinpeng Liu](https://moonsliu.github.io/)<sup>😎</sup>, [Bo Dai](https://daibo.info/)<sup>🥳$*$</sup>, [Yansong Tang](https://andytang15.github.io)<sup>😎</sup>
 
-Author list 
 
-links
+<sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (*Correspondence: Jingbo Wang and Bo Dai.)
+
+<p align="center">
+  <a href='https://arxiv.org/abs/2310.12978'>
+  <img src='https://img.shields.io/badge/Arxiv-2310.12978-A42C25?style=flat&logo=arXiv&logoColor=A42C25'>
+  </a> 
+  <a href='https://arxiv.org/pdf/2310.12978.pdf'>
+  <img src='https://img.shields.io/badge/Paper-PDF-yellow?style=flat&logo=arXiv&logoColor=yellow'>
+  </a> 
+  <a href='https://dai-wenxun.github.io/MotionLCM-page'>
+  <img src='https://img.shields.io/badge/Project-Page-%23df5b46?style=flat&logo=Google%20chrome&logoColor=%23df5b46'></a> 
+  <a href='https://youtu.be/PcxUzZ1zg6o'>
+  <img src='https://img.shields.io/badge/YouTube-Video-EA3323?style=flat&logo=youtube&logoColor=EA3323'></a> 
+  <a href='https://www.bilibili.com/video/BV1xH4y1973x/'>
+    <img src='https://img.shields.io/badge/Bilibili-Video-4EABE6?style=flat&logo=Bilibili&logoColor=4EABE6'></a>
+  <a href='https://github.com/Dai-Wenxun/MotionLCM'>
+  <img src='https://img.shields.io/badge/GitHub-Code-black?style=flat&logo=github&logoColor=white'></a> 
+  <a href='LICENSE'>
+  <img src='https://img.shields.io/badge/License-MotionLCM-blue.svg'>
+  </a> 
+  <a href="" target='_blank'>
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=Dai-Wenxun.MotionLCM&left_color=gray&right_color=%2342b983">
+  </a> 
+</p>
+
 
 ## 🤩 Abstract
 
-> xxx
+> This work introduces MotionLCM, extending controllable motion generation to a real-time level. Existing methods for spatial control in text-conditioned motion generation suffer from significant runtime inefficiency. To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, building upon the latent diffusion model (MLD). By employing one-step (or few-step) inference, we further improve the runtime efficiency of the motion latent diffusion model for motion generation. To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM. This design enables explicit control signals to influence the generation process directly, similar to controlling other latent-free diffusion models for motion generation. By employing these techniques, our approach achieves real-time human motion generation with text conditions and control signals. Experimental results demonstrate the remarkable generation and control capabilities of MotionLCM while maintaining real-time runtime efficiency.
 
 ## 📢 News
 
