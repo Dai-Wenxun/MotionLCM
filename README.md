@@ -67,7 +67,7 @@ Run the script to download dependencies materials:
 ```
 bash prepare/download_glove.sh
 bash prepare/download_t2m_evaluators.sh
-bash prepare/perpare_t5.sh
+bash prepare/prepare_t5.sh
 bash prepare/download_smpl_models.sh
 ```
 

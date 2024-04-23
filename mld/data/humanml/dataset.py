@@ -45,7 +45,7 @@ class Text2MotionDatasetV2(data.Dataset):
 
         if tiny:
             progress_bar = False
-            maxdata = 10 if tiny else 100
+            maxdata = 10
         else:
             maxdata = 1e10
 
