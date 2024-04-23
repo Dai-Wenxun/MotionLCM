@@ -1,9 +1,9 @@
 # MotionLCM: Real-time Controllable Motion Generation via Latent Consistency Model
 
-[Wenxun Dai](https://github.com/Dai-Wenxun)<sup>😎</sup>, [Ling-Hao Chen](https://lhchen.top)<sup>😎</sup>, [Jingbo Wang](https://wangjingbo1219.github.io)<sup>🥳$*$</sup>, [Jinpeng Liu](https://moonsliu.github.io/)<sup>😎</sup>, [Bo Dai](https://daibo.info/)<sup>🥳$*$</sup>, [Yansong Tang](https://andytang15.github.io)<sup>😎</sup>
+[Wenxun Dai](https://github.com/Dai-Wenxun)<sup>😎</sup>, [Ling-Hao Chen](https://lhchen.top)<sup>😎</sup>, [Jingbo Wang](https://wangjingbo1219.github.io)<sup>🥳</sup>, [Jinpeng Liu](https://moonsliu.github.io/)<sup>😎</sup>, [Bo Dai](https://daibo.info/)<sup>🥳</sup>, [Yansong Tang](https://andytang15.github.io)<sup>😎</sup>
 
 
-<sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (*Correspondence: Jingbo Wang and Bo Dai.)
+<sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (Correspondence: Jingbo Wang and Bo Dai.)
 
 <p align="center">
   <a href='https://arxiv.org/abs/2310.12978'>
@@ -331,3 +331,19 @@ If you find this work useful, please consider citing our paper:
   year={2024}
 }
 ```
+
+
+## 📚 License
+
+This code is distributed under an [MotionLCM LICENSE](LICENSE), which not allowed for commercial usage. Note that our code depends on other libraries and datasets which each have their own respective licenses that must also be followed.
+
+
+## 🌟 Star History
+
+<p align="center">
+    <a href="https://star-history.com/#Dai-Wenxun/MotionLCM" target="_blank">
+        <img width="500" src="https://api.star-history.com/svg?repos=Dai-Wenxun/MotionLCM&type=Date" alt="Star History Chart">
+    </a>
+<p>
+
+If you have any question, please contact at Wenxun Dai and cc to Ling-Hao Chen and Jingbo Wang.
