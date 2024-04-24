@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cu116
+torch==1.13.1
 gdown
 omegaconf
 rich
