@@ -1,6 +1,5 @@
 import os
 import pickle
-import random
 import sys
 from argparse import ArgumentParser
 

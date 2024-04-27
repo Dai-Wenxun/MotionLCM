@@ -123,9 +123,11 @@ for path in paths:
         global_orient=new_opt_pose[:, :3],
         body_pose=new_opt_pose[:, 3:],
         transl=root,
-        return_verts=True,
+        return_verts=True
     )
     vertices = output.vertices.detach().cpu().numpy()
+    floor_height = vertices[..., 1].min()
+    vertices[..., 1] -= floor_height
     data['vertices'] = vertices
 
     save_file = path.replace('.pkl', '_mesh.pkl')
