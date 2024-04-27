@@ -2,7 +2,6 @@ import os
 import pickle
 import random
 import sys
-import natsort
 from argparse import ArgumentParser
 
 try:
@@ -43,10 +42,7 @@ def render_cli() -> None:
         paths = [cfg.pkl]
     elif cfg.dir:
         paths = []
-        file_list = natsort.natsorted(os.listdir(cfg.dir))
-        begin_id = random.randrange(0, len(file_list))
-        file_list = file_list[begin_id:] + file_list[:begin_id]
-
+        file_list = os.listdir(cfg.dir)
         for item in file_list:
             if item.endswith("_mesh.pkl"):
                 paths.append(os.path.join(cfg.dir, item))
