@@ -326,7 +326,10 @@ We provide the quantitative and qualitative results in the paper.
 ## 🌹 Acknowledgement
 
 We would like to thank the authors of the following repositories for their excellent work: 
-
+[MLD](https://github.com/ChenFengYe/motion-latent-diffusion), 
+[OmniControl](https://github.com/neu-vi/omnicontrol), 
+[TEMOS](https://github.com/Mathux/TEMOS),
+[joints2smpl](https://github.com/wangsen1312/joints2smpl).
 
 ## 📜 Citation
 
