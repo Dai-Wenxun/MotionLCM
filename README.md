@@ -14,7 +14,7 @@
   </a> 
   <a href='https://dai-wenxun.github.io/MotionLCM-page'>
   <img src='https://img.shields.io/badge/Project-Page-%23df5b46?style=flat&logo=Google%20chrome&logoColor=%23df5b46'></a> 
-  <a href='https://youtu.be/PcxUzZ1zg6o'>
+  <a href='https://youtu.be/BhrGmJYaRE4'>
   <img src='https://img.shields.io/badge/YouTube-Video-EA3323?style=flat&logo=youtube&logoColor=EA3323'></a> 
   <a href='https://www.bilibili.com/video/BV1uT421y7AN/'>
     <img src='https://img.shields.io/badge/Bilibili-Video-4EABE6?style=flat&logo=Bilibili&logoColor=4EABE6'></a>
