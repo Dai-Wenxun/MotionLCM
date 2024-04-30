@@ -323,6 +323,24 @@ python -m test --cfg configs/motionlcm_control.yaml
 
 We provide the quantitative and qualitative results in the paper. 
 
+<details>
+  <summary><b> Text-to-Motion (quantitative)  </b></summary>
+
+<img src="assets/quantitative_t2m.png" alt="example" width="100%">
+</details>
+
+<details>
+  <summary><b> Text-to-Motion (qualitative)  </b></summary>
+
+<img src="assets/qualitative_t2m.png" alt="example" width="100%">
+</details>
+
+<details>
+  <summary><b> Motion Control (quantitative)  </b></summary>
+
+<img src="assets/quantitative_mc.png" alt="example" width="100%">
+</details>
+
 ## 🌹 Acknowledgement
 
 We would like to thank the authors of the following repositories for their excellent work: 
