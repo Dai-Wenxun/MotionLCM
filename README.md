@@ -31,7 +31,16 @@
 
 ## 🤩 Abstract
 
-> This work introduces MotionLCM, extending controllable motion generation to a real-time level. Existing methods for spatial control in text-conditioned motion generation suffer from significant runtime inefficiency. To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, building upon the latent diffusion model (MLD). By employing one-step (or few-step) inference, we further improve the runtime efficiency of the motion latent diffusion model for motion generation. To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM. This design enables explicit control signals to influence the generation process directly, similar to controlling other latent-free diffusion models for motion generation. By employing these techniques, our approach achieves real-time human motion generation with text conditions and control signals. Experimental results demonstrate the remarkable generation and control capabilities of MotionLCM while maintaining real-time runtime efficiency.
+> This work introduces MotionLCM, extending controllable motion generation to a real-time level. 
+Existing methods for spatial control in text-conditioned motion generation suffer from significant runtime inefficiency. 
+To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, 
+building upon the latent diffusion model (MLD). By employing one-step (or few-step) inference, 
+we further improve the runtime efficiency of the motion latent diffusion model for motion generation. 
+To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM 
+and enable explicit control signals (e.g., pelvis trajectory) in the vanilla motion space to control the generation process directly, 
+similar to controlling other latent-free diffusion models for motion generation. By employing these techniques, 
+our approach can generate human motions with text and control signals in real-time. 
+Experimental results demonstrate the remarkable generation and controlling capabilities of MotionLCM while maintaining real-time runtime efficiency.
 
 ## 📢 News
 
