@@ -329,6 +329,7 @@ We would like to thank the authors of the following repositories for their excel
 [MLD](https://github.com/ChenFengYe/motion-latent-diffusion), 
 [OmniControl](https://github.com/neu-vi/omnicontrol), 
 [TEMOS](https://github.com/Mathux/TEMOS),
+[HumanML3D](https://github.com/EricGuo5513/HumanML3D),
 [joints2smpl](https://github.com/wangsen1312/joints2smpl).
 
 ## 📜 Citation
