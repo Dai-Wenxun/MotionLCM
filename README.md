@@ -46,7 +46,7 @@ Experimental results demonstrate the remarkable generation and controlling capab
 
 ## 📢 News
 
-- **[2024/04/08]** upload paper and release code.
+- **[2024/05/01]** Upload paper and release code.
 
 ## 👨‍🏫 Quick Start
 
