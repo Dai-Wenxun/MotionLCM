@@ -157,9 +157,18 @@ MotionLCM provides two main functionalities: text-to-motion and motion control. 
 <details>
   <summary><b> 1. Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
 
+If you haven't completed `5. Prepare the datasets` in `👨‍🏫 Quick Start`, make sure to use the following command to download a tiny humanml3d dataset. The model instantiation requires the motion feature dimension of the dataset.
+
+```
+bash prepare/prepare_tiny_humanml3d.sh
+```
+
+Then, run the demo:
+
 ```
 python demo.py --cfg configs/motionlcm_t2m.yaml --example assets/example.txt
 ```
+
 </details>
 
 <details>
@@ -347,8 +356,8 @@ We would like to thank the authors of the following repositories for their excel
 [OmniControl](https://github.com/neu-vi/omnicontrol), 
 [TEMOS](https://github.com/Mathux/TEMOS),
 [HumanML3D](https://github.com/EricGuo5513/HumanML3D),
+[UniMoCap](https://github.com/LinghaoChan/UniMoCap),
 [joints2smpl](https://github.com/wangsen1312/joints2smpl).
-
 
 ## 📜 Citation
 
@@ -363,11 +372,9 @@ If you find this work useful, please consider citing our paper:
 }
 ```
 
-
 ## 📚 License
 
 This code is distributed under an [MotionLCM LICENSE](LICENSE), which not allowed for commercial usage. Note that our code depends on other libraries and datasets which each have their own respective licenses that must also be followed.
-
 
 ## 🌟 Star History
 
