@@ -7,11 +7,9 @@
 
 <p align="center">
   <a href='https://arxiv.org/abs/2404.19759'>
-  <img src='https://img.shields.io/badge/Arxiv-2404.19759-A42C25?style=flat&logo=arXiv&logoColor=A42C25'>
-  </a> 
+  <img src='https://img.shields.io/badge/Arxiv-2404.19759-A42C25?style=flat&logo=arXiv&logoColor=A42C25'></a> 
   <a href='https://arxiv.org/pdf/2404.19759.pdf'>
-  <img src='https://img.shields.io/badge/Paper-PDF-purple?style=flat&logo=arXiv&logoColor=yellow'>
-  </a> 
+  <img src='https://img.shields.io/badge/Paper-PDF-purple?style=flat&logo=arXiv&logoColor=yellow'></a> 
   <a href='https://huggingface.co/spaces/wxDai/MotionLCM'>
   <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-yellow'></a>
   <a href='https://dai-wenxun.github.io/MotionLCM-page'>
@@ -23,11 +21,9 @@
   <a href='https://github.com/Dai-Wenxun/MotionLCM'>
   <img src='https://img.shields.io/badge/GitHub-Code-black?style=flat&logo=github&logoColor=white'></a> 
   <a href='LICENSE'>
-  <img src='https://img.shields.io/badge/License-MotionLCM-blue.svg'>
-  </a> 
+  <img src='https://img.shields.io/badge/License-MotionLCM-blue.svg'></a> 
   <a href="" target='_blank'>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=Dai-Wenxun.MotionLCM&left_color=gray&right_color=%2342b983">
-  </a> 
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=Dai-Wenxun.MotionLCM&left_color=gray&right_color=%2342b983"></a> 
 </p>
 
 
