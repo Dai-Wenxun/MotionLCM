@@ -347,10 +347,12 @@ We provide the quantitative and qualitative results in the paper.
 
 We would like to thank the authors of the following repositories for their excellent work: 
 [MLD](https://github.com/ChenFengYe/motion-latent-diffusion), 
+[latent-consistency-model](https://github.com/luosiallen/latent-consistency-model), 
 [OmniControl](https://github.com/neu-vi/omnicontrol), 
 [TEMOS](https://github.com/Mathux/TEMOS),
 [HumanML3D](https://github.com/EricGuo5513/HumanML3D),
 [joints2smpl](https://github.com/wangsen1312/joints2smpl).
+
 
 ## 📜 Citation
 
