@@ -12,15 +12,15 @@
   <a href='https://arxiv.org/pdf/2404.19759.pdf'>
   <img src='https://img.shields.io/badge/Paper-PDF-purple?style=flat&logo=arXiv&logoColor=yellow'>
   </a> 
+  <a href='https://huggingface.co/spaces/wxDai/MotionLCM'>
   <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-yellow'></a>
-  <a href='https://github.com/Dai-Wenxun/MotionLCM'>
   <a href='https://dai-wenxun.github.io/MotionLCM-page'>
   <img src='https://img.shields.io/badge/Project-Page-%23df5b46?style=flat&logo=Google%20chrome&logoColor=%23df5b46'></a> 
   <a href='https://youtu.be/BhrGmJYaRE4'>
   <img src='https://img.shields.io/badge/YouTube-Video-EA3323?style=flat&logo=youtube&logoColor=EA3323'></a> 
   <a href='https://www.bilibili.com/video/BV1uT421y7AN/'>
   <img src='https://img.shields.io/badge/Bilibili-Video-4EABE6?style=flat&logo=Bilibili&logoColor=4EABE6'></a>
-  <a href='https://huggingface.co/spaces/wxDai/MotionLCM/'>
+  <a href='https://github.com/Dai-Wenxun/MotionLCM'>
   <img src='https://img.shields.io/badge/GitHub-Code-black?style=flat&logo=github&logoColor=white'></a> 
   <a href='LICENSE'>
   <img src='https://img.shields.io/badge/License-MotionLCM-blue.svg'>
