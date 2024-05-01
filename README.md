@@ -17,7 +17,9 @@
   <a href='https://youtu.be/BhrGmJYaRE4'>
   <img src='https://img.shields.io/badge/YouTube-Video-EA3323?style=flat&logo=youtube&logoColor=EA3323'></a> 
   <a href='https://www.bilibili.com/video/BV1uT421y7AN/'>
-    <img src='https://img.shields.io/badge/Bilibili-Video-4EABE6?style=flat&logo=Bilibili&logoColor=4EABE6'></a>
+  <img src='https://img.shields.io/badge/Bilibili-Video-4EABE6?style=flat&logo=Bilibili&logoColor=4EABE6'></a>
+  <a href='https://huggingface.co/spaces/wxDai/MotionLCM/'>
+  <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue'></a>
   <a href='https://github.com/Dai-Wenxun/MotionLCM'>
   <img src='https://img.shields.io/badge/GitHub-Code-black?style=flat&logo=github&logoColor=white'></a> 
   <a href='LICENSE'>
