@@ -6,10 +6,10 @@
 <sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (Correspondence: Jingbo Wang and Bo Dai.)
 
 <p align="center">
-  <a href='https://arxiv.org/abs/2310.12978'>
-  <img src='https://img.shields.io/badge/Arxiv-2310.12978-A42C25?style=flat&logo=arXiv&logoColor=A42C25'>
+  <a href='https://arxiv.org/abs/2404.19759'>
+  <img src='https://img.shields.io/badge/Arxiv-2404.19759-A42C25?style=flat&logo=arXiv&logoColor=A42C25'>
   </a> 
-  <a href='https://arxiv.org/pdf/2310.12978.pdf'>
+  <a href='https://arxiv.org/pdf/2404.19759.pdf'>
   <img src='https://img.shields.io/badge/Paper-PDF-yellow?style=flat&logo=arXiv&logoColor=yellow'>
   </a> 
   <a href='https://dai-wenxun.github.io/MotionLCM-page'>
