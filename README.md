@@ -2,7 +2,6 @@
 
 [Wenxun Dai](https://github.com/Dai-Wenxun)<sup>😎</sup>, [Ling-Hao Chen](https://lhchen.top)<sup>😎</sup>, [Jingbo Wang](https://wangjingbo1219.github.io)<sup>🥳</sup>, [Jinpeng Liu](https://moonsliu.github.io/)<sup>😎</sup>, [Bo Dai](https://daibo.info/)<sup>🥳</sup>, [Yansong Tang](https://andytang15.github.io)<sup>😎</sup>
 
-
 <sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (Correspondence: Jingbo Wang and Bo Dai.)
 
 <p align="center">
@@ -68,6 +67,17 @@ We test our code on Python 3.10.12 and PyTorch 1.13.1.
 
 <details>
   <summary><b> 2. Dependencies </b></summary>
+
+Install ffmpeg for visualizing stick figure (if not already installed):
+
+```
+sudo apt update
+sudo apt install ffmpeg
+ffmpeg -version  # check!
+```
+
+For users without sudo privileges, such as those on a slurm cluster, it is recommended to refer to [setup
+](https://github.com/innerlee/setup/tree/master) for manual installation.
 
 Run the script to download dependencies materials:
 
