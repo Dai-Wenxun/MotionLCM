@@ -76,9 +76,9 @@ class TM2TMetrics(Metric):
 
         # cat all embeddings
         shuffle_idx = torch.randperm(count_seq)
-        all_texts = dim_zero_cat(self.text_embeddings, axis=0).cpu()[shuffle_idx, :]
-        all_genmotions = dim_zero_cat(self.recmotion_embeddings, axis=0).cpu()[shuffle_idx, :]
-        all_gtmotions = dim_zero_cat(self.gtmotion_embeddings, axis=0).cpu()[shuffle_idx, :]
+        all_texts = dim_zero_cat(self.text_embeddings).cpu()[shuffle_idx, :]
+        all_genmotions = dim_zero_cat(self.recmotion_embeddings).cpu()[shuffle_idx, :]
+        all_gtmotions = dim_zero_cat(self.gtmotion_embeddings).cpu()[shuffle_idx, :]
 
         # Compute r-precision
         assert count_seq > self.R_size
