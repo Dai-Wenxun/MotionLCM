@@ -10,11 +10,11 @@ from tqdm.auto import tqdm
 from omegaconf import OmegaConf
 
 import torch
+import swanlab
 import diffusers
 import transformers
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
-import swanlab
 from diffusers.optimization import get_scheduler
 
 from mld.config import parse_args, instantiate_from_config
@@ -131,7 +131,10 @@ def main():
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
     elif cfg.vis == "swanlab":
-        run = swanlab.init(project=cfg.NAME, experiment_name=cfg.NAME ,config=cfg)
+        run = swanlab.init(project="MotionLCM", experiment_name=output_dir[2:].replace("/", "-"),
+                           suffix=None, config=cfg, logdir=output_dir)
+    else:
+        raise ValueError(f"Invalid vis method: {cfg.vis}")
 
     stream_handler = logging.StreamHandler(sys.stdout)
     file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))

@@ -8,6 +8,7 @@ from tqdm.auto import tqdm
 from omegaconf import OmegaConf
 
 import torch
+import swanlab
 import diffusers
 import transformers
 from torch.utils.tensorboard import SummaryWriter
@@ -17,8 +18,6 @@ from mld.config import parse_args
 from mld.data.get_data import get_datasets
 from mld.models.modeltype.mld import MLD
 from mld.utils.utils import print_table, set_seed, move_batch_to_device
-
-import swanlab
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -36,7 +35,10 @@ def main():
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
     elif cfg.vis == "swanlab":
-        run = swanlab.init(project=cfg.NAME, experiment_name=cfg.NAME ,config=cfg)
+        run = swanlab.init(project="MotionLCM", experiment_name=output_dir[2:].replace("/", "-"),
+                           suffix=None, config=cfg, logdir=output_dir)
+    else:
+        raise ValueError(f"Invalid vis method: {cfg.vis}")
 
     stream_handler = logging.StreamHandler(sys.stdout)
     file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))
