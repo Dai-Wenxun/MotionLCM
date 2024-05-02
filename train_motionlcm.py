@@ -131,7 +131,7 @@ def main():
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
     elif cfg.vis == "swanlab":
-        run = swanlab.init(project="MotionLCM", experiment_name=os.path.normpath(output_dir).replace("/", "-"),
+        run = swanlab.init(project="MotionLCM", experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
                            suffix=None, config=cfg, logdir=output_dir)
     else:
         raise ValueError(f"Invalid vis method: {cfg.vis}")
