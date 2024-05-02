@@ -8,6 +8,7 @@ from tqdm.auto import tqdm
 from omegaconf import OmegaConf
 
 import torch
+import swanlab
 import diffusers
 import transformers
 from torch.utils.tensorboard import SummaryWriter
@@ -30,8 +31,14 @@ def main():
     output_dir = osp.join(cfg.FOLDER, name_time_str)
     os.makedirs(output_dir, exist_ok=False)
     os.makedirs(f"{output_dir}/checkpoints", exist_ok=False)
-
-    writer = SummaryWriter(output_dir)
+    
+    if cfg.vis == "tb":
+        writer = SummaryWriter(output_dir)
+    elif cfg.vis == "swanlab":
+        run = swanlab.init(project="MotionLCM", experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
+                           suffix=None, config=cfg, logdir=output_dir)
+    else:
+        raise ValueError(f"Invalid vis method: {cfg.vis}")
 
     stream_handler = logging.StreamHandler(sys.stdout)
     file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))
@@ -133,7 +140,10 @@ def main():
         min_val_tj = metrics['Metrics/traj_fail_50cm']
         print_table(f'Metrics@Step-{global_step}', metrics)
         for k, v in metrics.items():
-            writer.add_scalar(k, v, global_step=global_step)
+            if cfg.vis == "tb":
+                writer.add_scalar(k, v, global_step=global_step)         
+            elif cfg.vis == "swanlab":            
+                run.log({k: v}, step=global_step)
 
         model.controlnet.train()
         model.traj_encoder.train()
@@ -189,7 +199,10 @@ def main():
                     "diff_loss": diff_loss.detach().item(), 'cond_loss': cond_loss.detach().item(), 'rot_loss': rot_loss.detach().item()}
             progress_bar.set_postfix(**logs)
             for k, v in logs.items():
-                writer.add_scalar(k, v, global_step=global_step)
+                if cfg.vis == "tb":
+                    writer.add_scalar(k, v, global_step=global_step)         
+                elif cfg.vis == "swanlab":            
+                    run.log({k: v}, step=global_step)
 
             if global_step >= cfg.TRAIN.max_train_steps:
                 break

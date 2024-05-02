@@ -35,6 +35,7 @@ def parse_args() -> DictConfig:
     parser.add_argument('--example', type=str, required=False, help="input text and lengths with txt format")
     parser.add_argument('--no-plot', action="store_true", required=False, help="whether plot the skeleton-based motion")
     parser.add_argument('--replication', type=int, default=1, help="the number of replication of sampling")
+    parser.add_argument('--vis', type=str, default="tb", choices=['tb', 'swanlab'], help="the visualization method, tensorboard or swanlab")
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.cfg)
@@ -44,4 +45,5 @@ def parse_args() -> DictConfig:
     cfg.example = args.example
     cfg.no_plot = args.no_plot
     cfg.replication = args.replication
+    cfg.vis = args.vis
     return cfg

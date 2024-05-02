@@ -41,6 +41,7 @@ Experimental results demonstrate the remarkable generation and controlling capab
 
 ## 📢 News
 
+- **[2024/05/02]** We support the [SwanLab](https://github.com/SwanHubX/SwanLab) logger, please refer to this [PR](https://github.com/Dai-Wenxun/MotionLCM/pull/7) for details.
 - **[2024/05/01]** Upload paper and release code.
 
 ## 👨‍🏫 Quick Start
