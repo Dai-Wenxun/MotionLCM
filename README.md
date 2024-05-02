@@ -2,7 +2,7 @@
 
 [Wenxun Dai](https://github.com/Dai-Wenxun)<sup>😎</sup>, [Ling-Hao Chen](https://lhchen.top)<sup>😎</sup>, [Jingbo Wang](https://wangjingbo1219.github.io)<sup>🥳</sup>, [Jinpeng Liu](https://moonsliu.github.io/)<sup>😎</sup>, [Bo Dai](https://daibo.info/)<sup>🥳</sup>, [Yansong Tang](https://andytang15.github.io)<sup>😎</sup>
 
-<sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (Correspondence: Jingbo Wang and Bo Dai.)
+<sup>😎</sup>Tsinghua University, <sup>🥳</sup>Shanghai AI Laboratory (Correspondence: Jingbo Wang and Bo Dai).
 
 <p align="center">
   <a href='https://arxiv.org/abs/2404.19759'>
