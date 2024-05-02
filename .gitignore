@@ -1,6 +1,7 @@
 **/*.pyc
 .idea/
 __pycache__/
+swanlog/
 
 deps/
 datasets/

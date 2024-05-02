@@ -14,6 +14,7 @@ import diffusers
 import transformers
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
+import swanlab
 from diffusers.optimization import get_scheduler
 
 from mld.config import parse_args, instantiate_from_config
@@ -127,7 +128,10 @@ def main():
     os.makedirs(output_dir, exist_ok=False)
     os.makedirs(f"{output_dir}/checkpoints", exist_ok=False)
 
-    writer = SummaryWriter(output_dir)
+    if cfg.vis == "tb":
+        writer = SummaryWriter(output_dir)
+    elif cfg.vis == "swanlab":
+        run = swanlab.init(project=cfg.NAME, experiment_name=cfg.NAME ,config=cfg)
 
     stream_handler = logging.StreamHandler(sys.stdout)
     file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))
@@ -245,7 +249,10 @@ def main():
         min_val_fid = metrics['Metrics/FID']
         print_table(f'Metrics@Step-{global_step}', metrics)
         for k, v in metrics.items():
-            writer.add_scalar(k, v, global_step=global_step)
+            if cfg.vis == "tb":
+                writer.add_scalar(k, v, global_step=global_step)
+            elif cfg.vis == "swanlab":
+                run.log({k: v}, step=global_step)
         base_model.train()
         return max_val_rp1, min_val_fid
 
@@ -411,9 +418,12 @@ def main():
 
             logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
-            writer.add_scalar('loss', logs['loss'], global_step=global_step)
-            writer.add_scalar('lr', logs['lr'], global_step=global_step)
-
+            if cfg.vis == "tb":
+                writer.add_scalar('loss', logs['loss'], global_step=global_step)
+                writer.add_scalar('lr', logs['lr'], global_step=global_step)
+            elif cfg.vis == "swanlab":
+                run.log({'loss': logs['loss'], 'lr': logs['lr']}, step=global_step)
+            
             if global_step >= cfg.TRAIN.max_train_steps:
                 break
 
