@@ -77,8 +77,7 @@ sudo apt install ffmpeg
 ffmpeg -version  # check!
 ```
 
-For users without sudo privileges, such as those on a slurm cluster, it is recommended to refer to [setup
-](https://github.com/innerlee/setup/tree/master) for manual installation.
+For users without sudo privileges, such as those on a slurm cluster, it is recommended to refer to [setup](https://github.com/innerlee/setup/tree/master) for manual installation.
 
 Run the script to download dependencies materials:
 
