@@ -377,7 +377,7 @@ If you find this work useful, please consider citing our paper:
 ```bash
 @article{motionlcm,
   title={MotionLCM: Real-time Controllable Motion Generation via Latent Consistency Model},
-  author={Wenxun Dai and Ling-Hao Chen and Jingbo Wang and Jinpeng Liu and Bo Dai and Yansong Tang},
+  author={Dai, Wenxun and Chen, Ling-Hao and Wang, Jingbo and Liu, Jinpeng and Dai, Bo and Tang, Yansong},
   journal={arXiv preprint arXiv:2404.19759},
   year={2024},
 }
