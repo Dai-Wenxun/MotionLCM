@@ -119,6 +119,8 @@ Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-t
 cp -r ../HumanML3D/HumanML3D ./datasets/humanml3d
 ```
 
+The unofficial method of data preparation can be found in this [issue](https://github.com/Dai-Wenxun/MotionLCM/issues/6).
+
 </details>
 
 <details>
