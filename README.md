@@ -86,7 +86,7 @@ ffmpeg -version  # check!
 
 Run the following command to install [git-lfs](https://git-lfs.com/):
 ```
-conda install anaconda::git-lfs
+conda install conda-forge::git-lfs
 ```
 
 Run the script to download dependencies materials:
