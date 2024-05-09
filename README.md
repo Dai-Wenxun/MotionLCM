@@ -305,7 +305,7 @@ The parameters required for model training and testing are recorded in the corre
 
 #### 2.1. Ready to train MotionLCM model
 
-Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command:
+Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command (**13GB usage**):
 
 ```
 python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
@@ -313,7 +313,7 @@ python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
 
 #### 2.2. Ready to train motion ControlNet
 
-Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the following command:
+Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the following command (**16GB usage**):
 
 ```
 python -m train_motion_control --cfg configs/motionlcm_control.yaml
