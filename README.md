@@ -84,7 +84,10 @@ conda install conda-forge::ffmpeg
 ffmpeg -version  # check!
 ```
 
-For users without sudo privileges, such as those on a slurm cluster, it is recommended to refer to [setup](https://github.com/innerlee/setup/tree/master) for manual installation.
+Run the following command to install [git-lfs](https://git-lfs.com/):
+```
+conda install anaconda::git-lfs
+```
 
 Run the script to download dependencies materials:
 
