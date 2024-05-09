@@ -69,11 +69,18 @@ We test our code on Python 3.10.12 and PyTorch 1.13.1.
 <details>
   <summary><b> 2. Dependencies </b></summary>
 
-Install ffmpeg for visualizing stick figure (if not already installed):
+If you have the `sudo` permission, install `ffmpeg` for visualizing stick figure (if not already installed):
 
 ```
 sudo apt update
 sudo apt install ffmpeg
+ffmpeg -version  # check!
+```
+
+If you do not have the `sudo` permission to install it, please install it via `conda`: 
+
+```
+conda install conda-forge::ffmpeg
 ffmpeg -version  # check!
 ```
 
