@@ -261,7 +261,6 @@ class MLD(BaseModel):
 
         controlnet_cond = None
         if self.is_controlnet:
-            hint = hint
             hint_mask = hint.sum(-1) != 0
             controlnet_cond = self.traj_encoder(hint, mask=hint_mask)
             controlnet_cond = controlnet_cond.permute(1, 0, 2)
