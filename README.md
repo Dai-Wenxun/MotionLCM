@@ -43,7 +43,6 @@ Experimental results demonstrate the remarkable generation and controlling capab
 
 - **[2024/07/02]** MotionLCM is officially accepted by **ECCV 2024**.
 - **[2024/05/01]** Upload paper and release code.
-- **[2024/05/01]** Upload paper and release code.
 
 ## 👨‍🏫 Quick Start
 
