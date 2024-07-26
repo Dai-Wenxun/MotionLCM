@@ -1,0 +1,85 @@
+FOLDER: './experiments_recons'
+TEST_FOLDER: './experiments_recons_test'
+
+NAME: 'vae_humanml'
+
+TRAIN:
+  DATASET: 'humanml3d'
+  BATCH_SIZE: 128
+  SPLIT: 'train'
+  NUM_WORKERS: 8
+  PERSISTENT_WORKERS: true
+  SEED_VALUE: 1234
+  PRETRAINED: ''
+
+  validation_steps: -1
+  validation_epochs: 1
+  checkpointing_steps: -1
+  checkpointing_epochs: 1
+  max_train_steps: -1
+  max_train_epochs: 1
+  learning_rate: 1e-4
+  lr_scheduler: "cosine"
+  lr_warmup_steps: 1000
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_weight_decay: 0.0
+  adam_epsilon: 1e-08
+  max_grad_norm: 1.0
+
+VAL:
+  DATASET: 'humanml3d'
+  BATCH_SIZE: 32
+  SPLIT: 'test'
+  NUM_WORKERS: 12
+
+TEST:
+  DATASET: 'humanml3d'
+  BATCH_SIZE: 1
+  SPLIT: 'test'
+  NUM_WORKERS: 12
+
+  CHECKPOINTS: 'experiments_recons/vae_humanml/vae_humanml.ckpt'
+
+  # Testing Args
+  REPLICATION_TIMES: 20
+  DIVERSITY_TIMES: 300
+
+DATASET:
+  SMPL_PATH: './deps/smpl'
+  WORD_VERTILIZER_PATH: './deps/glove/'
+  HUMANML3D:
+    FRAME_RATE: 20.0
+    UNIT_LEN: 4
+    ROOT: './datasets/humanml3d'
+  SAMPLER:
+    MAX_LEN: 200
+    MIN_LEN: 40
+    MAX_TEXT_LEN: 20
+
+METRIC:
+  DIST_SYNC_ON_STEP: true
+  TYPE: ['TM2TMetrics', "PosMetrics"]
+
+model:
+  target: 'modules'
+  latent_dim: [1, 256]
+
+  # VAE Args
+  rec_feats_ratio: 1.0
+  rec_joints_ratio: 1.0
+  kl_ratio: 1e-4
+
+  t2m_textencoder:
+    dim_word: 300
+    dim_pos_ohot: 15
+    dim_text_hidden: 512
+    dim_coemb_hidden: 512
+
+  t2m_motionencoder:
+    dim_move_hidden: 512
+    dim_move_latent: 512
+    dim_motion_hidden: 1024
+    dim_motion_latent: 512
+
+  t2m_path: './deps/t2m/'
