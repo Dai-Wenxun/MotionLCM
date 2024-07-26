@@ -159,6 +159,7 @@ def main():
                     save_path = os.path.join(output_dir, 'checkpoints',
                                              f"checkpoint-{global_step}-mpjpe-{round(cur_mpjpe, 5)}.ckpt")
                     ckpt = dict(state_dict=model.state_dict())
+                    model.on_save_checkpoint(ckpt)
                     torch.save(ckpt, save_path)
                     logger.info(f"Saved state to {save_path} with mpjpe: {round(cur_mpjpe, 5)}")
 
@@ -167,6 +168,7 @@ def main():
                     save_path = os.path.join(output_dir, 'checkpoints',
                                              f"checkpoint-{global_step}-fid-{round(cur_fid, 3)}.ckpt")
                     ckpt = dict(state_dict=model.state_dict())
+                    model.on_save_checkpoint(ckpt)
                     torch.save(ckpt, save_path)
                     logger.info(f"Saved state to {save_path} with fid: {round(cur_fid, 3)}")
 
@@ -186,6 +188,7 @@ def main():
             if global_step >= cfg.TRAIN.max_train_steps:
                 save_path = os.path.join(output_dir, 'checkpoints', "checkpoint-last.ckpt")
                 ckpt = dict(state_dict=model.state_dict())
+                model.on_save_checkpoint(ckpt)
                 torch.save(ckpt, save_path)
                 exit(0)
 
