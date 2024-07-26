@@ -377,11 +377,11 @@ class TransformerDecoderLayer(nn.Module):
                                  tgt_key_padding_mask, memory_key_padding_mask, pos, query_pos)
 
 
-def _get_clone(module) -> nn.Module:
+def _get_clone(module: nn.Module) -> nn.Module:
     return copy.deepcopy(module)
 
 
-def _get_clones(module, N) -> nn.ModuleList:
+def _get_clones(module: nn.Module, N: int) -> nn.ModuleList:
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 

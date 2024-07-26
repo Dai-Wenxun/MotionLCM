@@ -1,4 +1,3 @@
-import os
 import time
 import inspect
 import logging
@@ -11,9 +10,8 @@ from omegaconf import DictConfig
 import torch
 import torch.nn.functional as F
 
-from mld.data.base import BASEDataModule
+from mld.data.base import BaseDataModule
 from mld.config import instantiate_from_config
-from mld.models.architectures import mld_denoiser, mld_vae, t2m_motionenc, t2m_textenc
 from mld.utils.temos_utils import lengths_to_mask, remove_padding
 from mld.utils.utils import count_parameters, get_guidance_scale_embedding, extract_into_tensor, sum_flat
 
@@ -23,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class MLD(BaseModel):
-    def __init__(self, cfg: DictConfig, datamodule: BASEDataModule) -> None:
+    def __init__(self, cfg: DictConfig, datamodule: BaseDataModule) -> None:
         super().__init__()
 
         self.cfg = cfg
@@ -43,7 +41,7 @@ class MLD(BaseModel):
 
         self._get_t2m_evaluator(cfg)
 
-        self.metrics_dict = cfg.METRIC.TYPE
+        self.metric_list = cfg.METRIC.TYPE
         self.configure_metrics()
 
         self.feats2joints = datamodule.feats2joints
@@ -71,7 +69,7 @@ class MLD(BaseModel):
 
             self.traj_encoder = instantiate_from_config(cfg.model.traj_encoder)
 
-            logger.info(f"control scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
+            logger.info(f"control_scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
                         f"cond_ratio: {self.cond_ratio}, rot_ratio: {self.rot_ratio}, "
                         f"vaeloss_type: {self.vaeloss_type}")
             logger.info(f"is_controlnet_temporal: {self.is_controlnet_temporal}")
@@ -98,46 +96,6 @@ class MLD(BaseModel):
             controlnet = count_parameters(self.controlnet)
             logger.info(f'ControlNet: {controlnet}M')
             logger.info(f'Spatial VAE: {vae}M')
-
-    def _get_t2m_evaluator(self, cfg: DictConfig) -> None:
-        self.t2m_moveencoder = t2m_motionenc.MovementConvEncoder(
-            input_size=cfg.DATASET.NFEATS - 4,
-            hidden_size=cfg.model.t2m_motionencoder.dim_move_hidden,
-            output_size=cfg.model.t2m_motionencoder.dim_move_latent,
-        )
-
-        self.t2m_motionencoder = t2m_motionenc.MotionEncoderBiGRUCo(
-            input_size=cfg.model.t2m_motionencoder.dim_move_latent,
-            hidden_size=cfg.model.t2m_motionencoder.dim_motion_hidden,
-            output_size=cfg.model.t2m_motionencoder.dim_motion_latent,
-        )
-
-        self.t2m_textencoder = t2m_textenc.TextEncoderBiGRUCo(
-            word_size=cfg.model.t2m_textencoder.dim_word,
-            pos_size=cfg.model.t2m_textencoder.dim_pos_ohot,
-            hidden_size=cfg.model.t2m_textencoder.dim_text_hidden,
-            output_size=cfg.model.t2m_textencoder.dim_coemb_hidden,
-        )
-
-        # load pretrained
-        dataname = cfg.TEST.DATASETS[0]
-        dataname = "t2m" if dataname == "humanml3d" else dataname
-        t2m_checkpoint = torch.load(
-            os.path.join(cfg.model.t2m_path, dataname, "text_mot_match/model/finest.tar"), map_location='cpu')
-        self.t2m_textencoder.load_state_dict(t2m_checkpoint["text_encoder"])
-        self.t2m_moveencoder.load_state_dict(t2m_checkpoint["movement_encoder"])
-        self.t2m_motionencoder.load_state_dict(t2m_checkpoint["motion_encoder"])
-
-        # freeze params
-        self.t2m_textencoder.eval()
-        self.t2m_moveencoder.eval()
-        self.t2m_motionencoder.eval()
-        for p in self.t2m_textencoder.parameters():
-            p.requires_grad = False
-        for p in self.t2m_moveencoder.parameters():
-            p.requires_grad = False
-        for p in self.t2m_motionencoder.parameters():
-            p.requires_grad = False
 
     def forward(self, batch: dict) -> tuple:
         texts = batch["text"]
@@ -506,7 +464,7 @@ class MLD(BaseModel):
         return rs_set
 
     def allsplit_step(self, split: str, batch: dict) -> Optional[dict]:
-        if split == "train":
+        if split in ["train", "val"]:
             loss_dict = self.train_diffusion_forward(batch)
             return loss_dict
 
@@ -514,24 +472,14 @@ class MLD(BaseModel):
         if split == "test":
             rs_set = self.t2m_eval(batch)
 
-            # MultiModality evaluation
-            if self.datamodule.is_mm:
-                metrics_dicts = ['MMMetrics']
-            else:
-                metrics_dicts = self.metrics_dict
-
-            for metric in metrics_dicts:
+            for metric in self.metric_list:
                 if metric == "TM2TMetrics":
                     getattr(self, metric).update(
-                        # lat_t, latent encoded from text
-                        # lat_rm, latent encoded from reconstructed motion
-                        # lat_m, latent encoded from gt motion
                         rs_set["lat_t"],
                         rs_set["lat_rm"],
                         rs_set["lat_m"],
-                        batch["length"],
-                    )
-                elif metric == "MMMetrics":
+                        batch["length"])
+                elif metric == "MMMetrics" and self.datamodule.is_mm:
                     getattr(self, metric).update(rs_set["lat_rm"].unsqueeze(0),
                                                  batch["length"])
                 elif metric == 'ControlMetrics':
@@ -539,4 +487,4 @@ class MLD(BaseModel):
                     getattr(self, metric).update(rs_set["joints_rst"], rs_set['hint'],
                                                  rs_set['mask_hint'], batch['length'])
                 else:
-                    raise TypeError(f"Not support this metric {metric}")
+                    raise TypeError(f"Not support this metric: {metric}")

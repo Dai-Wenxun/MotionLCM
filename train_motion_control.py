@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 from diffusers.optimization import get_scheduler
 
 from mld.config import parse_args
-from mld.data.get_data import get_datasets
+from mld.data.get_data import get_dataset
 from mld.models.modeltype.mld import MLD
 from mld.utils.utils import print_table, set_seed, move_batch_to_device
 

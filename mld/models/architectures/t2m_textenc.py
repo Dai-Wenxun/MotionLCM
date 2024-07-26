@@ -9,20 +9,16 @@ class TextEncoderBiGRUCo(nn.Module):
 
         self.pos_emb = nn.Linear(pos_size, word_size)
         self.input_emb = nn.Linear(word_size, hidden_size)
-        self.gru = nn.GRU(
-            hidden_size, hidden_size, batch_first=True, bidirectional=True
-        )
+        self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True, bidirectional=True)
         self.output_net = nn.Sequential(
             nn.Linear(hidden_size * 2, hidden_size),
             nn.LayerNorm(hidden_size),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(hidden_size, output_size),
-        )
+            nn.Linear(hidden_size, output_size))
 
         self.hidden_size = hidden_size
         self.hidden = nn.Parameter(
-            torch.randn((2, 1, self.hidden_size), requires_grad=True)
-        )
+            torch.randn((2, 1, self.hidden_size), requires_grad=True))
 
     def forward(self, word_embs: torch.Tensor, pos_onehot: torch.Tensor,
                 cap_lens: torch.Tensor) -> torch.Tensor:

@@ -7,6 +7,28 @@ import torch
 from torch import linalg
 
 
+# Motion Reconstruction
+
+def calculate_mpjpe(gt_joints, pred_joints):
+    """
+    gt_joints: num_poses x num_joints x 3
+    pred_joints: num_poses x num_joints x 3
+    (obtained from recover_from_ric())
+    """
+    assert gt_joints.shape == pred_joints.shape, \
+        f"GT shape: {gt_joints.shape}, pred shape: {pred_joints.shape}"
+
+    # Align by root (pelvis)
+    gt_joints = gt_joints - gt_joints[:, [0]]
+    pred_joints = pred_joints - pred_joints[:, [0]]
+
+    # Compute MPJPE
+    mpjpe = torch.linalg.norm(pred_joints - gt_joints, dim=-1)  # num_poses x num_joints
+    mpjpe = mpjpe.mean(-1)  # num_poses
+
+    return mpjpe
+
+
 # Text-to-Motion
 
 # (X - X_train)*(X - X_train) = -2X*X_train + X*X + X_train*X_train
@@ -195,7 +217,7 @@ def calculate_multimodality_np(activation: np.ndarray, multimodality_times: int)
 def calculate_skating_ratio(motions: torch.Tensor) -> tuple:
     thresh_height = 0.05  # 10
     fps = 20.0
-    thresh_vel = 0.50  # 20 cm /s
+    thresh_vel = 0.50  # 20 cm/s
     avg_window = 5  # frames
 
     # 10 left, 11 right foot. XZ plane, y up

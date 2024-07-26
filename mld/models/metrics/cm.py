@@ -11,7 +11,7 @@ class ControlMetrics(Metric):
     def __init__(self, dist_sync_on_step: bool = True) -> None:
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
-        self.name = "control_metrics"
+        self.name = "Control errors"
 
         self.add_state("count_seq", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("skate_ratio_sum", default=torch.tensor(0.), dist_reduce_fx="sum")
@@ -30,7 +30,7 @@ class ControlMetrics(Metric):
         for (k, v) in zip(self.traj_err_key, traj_err):
             metrics[k] = v
 
-        return {**metrics}
+        return metrics
 
     def update(self, joints: torch.Tensor,  hint: torch.Tensor,
                mask_hint: torch.Tensor, lengths: list[int]) -> None:

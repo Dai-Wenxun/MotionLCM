@@ -1,5 +1,6 @@
-import codecs as cs
 import random
+import logging
+import codecs as cs
 from os.path import join as pjoin
 
 import numpy as np
@@ -10,6 +11,8 @@ from torch.utils import data
 
 from mld.data.humanml.scripts.motion_process import recover_from_ric
 from .utils.word_vectorizer import WordVectorizer
+
+logger = logging.getLogger(__name__)
 
 
 class Text2MotionDatasetV2(data.Dataset):
@@ -26,6 +29,7 @@ class Text2MotionDatasetV2(data.Dataset):
         unit_length: int,
         motion_dir: str,
         text_dir: str,
+        fps: int,
         tiny: bool = False,
         progress_bar: bool = True,
         **kwargs,
@@ -43,11 +47,7 @@ class Text2MotionDatasetV2(data.Dataset):
                 id_list.append(line.strip())
         self.id_list = id_list
 
-        if tiny:
-            progress_bar = False
-            maxdata = 10
-        else:
-            maxdata = 1e10
+        maxdata = 10 if tiny else 1e10
 
         if progress_bar:
             enumerator = enumerate(
@@ -66,7 +66,7 @@ class Text2MotionDatasetV2(data.Dataset):
                 break
             try:
                 motion = np.load(pjoin(motion_dir, name + ".npy"))
-                if (len(motion)) < self.min_motion_length or (len(motion) >= 200):
+                if len(motion) < self.min_motion_length or len(motion) >= self.max_motion_length:
                     bad_count += 1
                     continue
                 text_data = []
@@ -89,19 +89,13 @@ class Text2MotionDatasetV2(data.Dataset):
                             text_data.append(text_dict)
                         else:
                             try:
-                                n_motion = motion[int(f_tag * 20):int(to_tag *
-                                                                      20)]
-                                if (len(n_motion)
-                                    ) < self.min_motion_length or (
-                                        (len(n_motion) >= 200)):
+                                n_motion = motion[int(f_tag * fps): int(to_tag * fps)]
+                                if (len(n_motion)) < self.min_motion_length or \
+                                        len(n_motion) >= self.max_motion_length:
                                     continue
-                                new_name = (
-                                    random.choice("ABCDEFGHIJKLMNOPQRSTUVW") +
-                                    "_" + name)
+                                new_name = random.choice("ABCDEFGHIJKLMNOPQRSTUVW") + "_" + name
                                 while new_name in data_dict:
-                                    new_name = (random.choice(
-                                        "ABCDEFGHIJKLMNOPQRSTUVW") + "_" +
-                                                name)
+                                    new_name = random.choice("ABCDEFGHIJKLMNOPQRSTUVW") + "_" + name
                                 data_dict[new_name] = {
                                     "motion": n_motion,
                                     "length": len(n_motion),
@@ -128,6 +122,12 @@ class Text2MotionDatasetV2(data.Dataset):
         name_list, length_list = zip(
             *sorted(zip(new_name_list, length_list), key=lambda x: x[1]))
 
+        if not tiny:
+            logger.info(f"Reading {len(self.id_list)} motions from {split_file}.")
+            logger.info(f"Total {len(name_list)} motions are used.")
+            logger.info(f"{bad_count} motion sequences not within the length range of "
+                        f"[{self.min_motion_length}, {self.max_motion_length}) are filtered out.")
+
         self.mean = mean
         self.std = std
 
@@ -150,9 +150,8 @@ class Text2MotionDatasetV2(data.Dataset):
             self.training_density = model_params.training_density
             self.testing_density = model_params.testing_density
 
-        self.length_arr = np.array(length_list)
         self.data_dict = data_dict
-        self.nfeats = motion.shape[1]
+        self.nfeats = data_dict[name_list[0]]["motion"].shape[1]
         self.name_list = name_list
 
     def __len__(self) -> int:
@@ -227,8 +226,7 @@ class Text2MotionDatasetV2(data.Dataset):
             # pad with "unk"
             tokens = ["sos/OTHER"] + tokens + ["eos/OTHER"]
             sent_len = len(tokens)
-            tokens = tokens + ["unk/OTHER"
-                               ] * (self.max_text_len + 2 - sent_len)
+            tokens = tokens + ["unk/OTHER"] * (self.max_text_len + 2 - sent_len)
         else:
             # crop
             tokens = tokens[:self.max_text_len]

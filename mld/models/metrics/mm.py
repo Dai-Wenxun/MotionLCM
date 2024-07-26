@@ -36,7 +36,7 @@ class MMMetrics(Metric):
         metrics['MultiModality'] = calculate_multimodality_np(
             all_mm_motions, self.mm_num_times)
 
-        return {**metrics}
+        return metrics
 
     def update(self, mm_motion_embeddings: torch.Tensor, lengths: list[int]) -> None:
         self.count += sum(lengths)

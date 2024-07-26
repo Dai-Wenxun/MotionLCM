@@ -12,8 +12,7 @@ class MovementConvEncoder(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(hidden_size, output_size, 4, 2, 1),
             nn.Dropout(0.2, inplace=True),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
+            nn.LeakyReLU(0.2, inplace=True))
         self.out_net = nn.Linear(output_size, output_size)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:

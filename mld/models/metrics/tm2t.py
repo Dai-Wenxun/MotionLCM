@@ -1,7 +1,10 @@
+import torch
+
 from torchmetrics import Metric
 from torchmetrics.utilities import dim_zero_cat
 
-from .utils import *
+from .utils import (euclidean_distance_matrix, calculate_top_k, calculate_diversity_np,
+                    calculate_activation_statistics_np, calculate_frechet_distance_np)
 
 
 class TM2TMetrics(Metric):
@@ -13,7 +16,7 @@ class TM2TMetrics(Metric):
                  dist_sync_on_step: bool = True) -> None:
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
-        self.name = "matching, fid, and diversity scores"
+        self.name = "Matching, FID, and Diversity scores"
 
         self.top_k = top_k
         self.R_size = R_size

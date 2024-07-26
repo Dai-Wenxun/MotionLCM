@@ -19,7 +19,7 @@ POS_enumerator = {
     'Obj_VIP': 11,
     'Act_VIP': 12,
     'Desc_VIP': 13,
-    'OTHER': 14,
+    'OTHER': 14
 }
 
 Loc_list = ('left', 'right', 'clockwise', 'counterclockwise', 'anticlockwise', 'forward', 'back', 'backward',

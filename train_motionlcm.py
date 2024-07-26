@@ -18,7 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 from diffusers.optimization import get_scheduler
 
 from mld.config import parse_args, instantiate_from_config
-from mld.data.get_data import get_datasets
+from mld.data.get_data import get_dataset
 from mld.models.modeltype.mld import MLD
 from mld.utils.utils import print_table, set_seed, move_batch_to_device
 
@@ -152,10 +152,10 @@ def main():
 
     logger.info(f'Training guidance scale range (w): [{cfg.TRAIN.w_min}, {cfg.TRAIN.w_max}]')
     logger.info(f'EMA rate (mu): {cfg.TRAIN.ema_decay}')
-    logger.info(f'Skipping interval (k): {1000 / cfg.TRAIN.num_ddim_timesteps}')
+    logger.info(f'Skipping interval (k): {cfg.model.scheduler.params.num_train_timesteps / cfg.TRAIN.num_ddim_timesteps}')
     logger.info(f'Loss type (huber or l2): {cfg.TRAIN.loss_type}')
 
-    datasets = get_datasets(cfg)[0]
+    datasets = get_dataset(cfg, phase='train')
     train_dataloader = datasets.train_dataloader()
     val_dataloader = datasets.val_dataloader()
 

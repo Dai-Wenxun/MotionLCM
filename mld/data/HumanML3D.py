@@ -6,12 +6,12 @@ from omegaconf import DictConfig
 
 import torch
 
-from .base import BASEDataModule
+from .base import BaseDataModule
 from .humanml.dataset import Text2MotionDatasetV2
 from .humanml.scripts.motion_process import recover_from_ric
 
 
-class HumanML3DDataModule(BASEDataModule):
+class HumanML3DDataModule(BaseDataModule):
 
     def __init__(self,
                  cfg: DictConfig,
