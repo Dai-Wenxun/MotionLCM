@@ -36,6 +36,11 @@ class VAE(BaseModel):
         self.rec_joints_ratio = cfg.model.rec_joints_ratio
         self.kl_ratio = cfg.model.kl_ratio
 
+        logger.info(f"latent_dim: {cfg.model.latent_dim}")
+        logger.info(f"rec_feats_ratio: {self.rec_feats_ratio}, "
+                    f"rec_joints_ratio: {self.rec_joints_ratio}, "
+                    f"kl_ratio: {self.kl_ratio}")
+
         self.summarize_parameters()
 
     def summarize_parameters(self) -> None:
