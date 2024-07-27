@@ -311,7 +311,16 @@ class MLD(BaseModel):
             # LCM
             model_pred = n_set['model_pred']
             target = n_set['model_gt']
-            diff_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+
+            if self.cfg.TRAIN.loss_type == "l2":
+                diff_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+            elif self.cfg.TRAIN.loss_type == "huber":
+                diff_loss = torch.mean(
+                    torch.sqrt(
+                        (model_pred.float() - target.float()) ** 2 + self.cfg.TRAIN.huber_c ** 2) - self.cfg.TRAIN.huber_c
+                )
+            else:
+                raise ValueError(f'Unknown loss type: {self.cfg.TRAIN.loss_type}.')
         else:
             # DM
             model_pred = n_set['noise']
@@ -320,7 +329,7 @@ class MLD(BaseModel):
 
         loss_dict['diff_loss'] = diff_loss
 
-        if self.vaeloss:
+        if self.is_controlnet and self.vaeloss:
             z_pred = n_set['model_pred']
             feats_rst = self.vae.decode(z_pred.transpose(0, 1), lengths)
             joints_rst = self.feats2joints(feats_rst)
@@ -367,6 +376,8 @@ class MLD(BaseModel):
             loss_dict['cond_loss'] = torch.tensor(0., device=diff_loss.device)
             loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
 
+        loss = sum([v for v in loss_dict.values()])
+        loss_dict['loss'] = loss
         return loss_dict
 
     def t2m_eval(self, batch: dict) -> dict:
@@ -462,12 +473,7 @@ class MLD(BaseModel):
         return rs_set
 
     def allsplit_step(self, split: str, batch: dict) -> Optional[dict]:
-        if split in ["train", "val"]:
-            loss_dict = self.train_diffusion_forward(batch)
-            return loss_dict
-
-        # Compute the metrics
-        if split == "test":
+        if split in ["test", "val"]:
             rs_set = self.t2m_eval(batch)
 
             for metric in self.metric_list:
@@ -485,4 +491,8 @@ class MLD(BaseModel):
                     getattr(self, metric).update(rs_set["joints_rst"], rs_set['hint'],
                                                  rs_set['mask_hint'], batch['length'])
                 else:
-                    raise TypeError(f"Not support this metric: {metric}")
+                    raise TypeError(f"Not support this metric: {metric}.")
+
+        if split in ["train", "val"]:
+            loss_dict = self.train_diffusion_forward(batch)
+            return loss_dict

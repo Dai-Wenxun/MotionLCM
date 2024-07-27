@@ -131,8 +131,9 @@ def main():
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
     elif cfg.vis == "swanlab":
-        run = swanlab.init(project="MotionLCM", experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
-                           suffix=None, config=cfg, logdir=output_dir)
+        writer = swanlab.init(project="MotionLCM",
+                              experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
+                              suffix=None, config=dict(**cfg), logdir=output_dir)
     else:
         raise ValueError(f"Invalid vis method: {cfg.vis}")
 
@@ -155,13 +156,13 @@ def main():
     logger.info(f'Skipping interval (k): {cfg.model.scheduler.params.num_train_timesteps / cfg.TRAIN.num_ddim_timesteps}')
     logger.info(f'Loss type (huber or l2): {cfg.TRAIN.loss_type}')
 
-    datasets = get_dataset(cfg, phase='train')
-    train_dataloader = datasets.train_dataloader()
-    val_dataloader = datasets.val_dataloader()
+    dataset = get_dataset(cfg)
+    train_dataloader = dataset.train_dataloader()
+    val_dataloader = dataset.val_dataloader()
 
     logger.info(f"Loading pretrained model: {cfg.TRAIN.PRETRAINED}")
     state_dict = torch.load(cfg.TRAIN.PRETRAINED, map_location="cpu")["state_dict"]
-    base_model = MLD(cfg, datasets)
+    base_model = MLD(cfg, dataset)
     base_model.load_state_dict(state_dict)
 
     noise_scheduler = base_model.noise_scheduler
@@ -170,8 +171,7 @@ def main():
     solver = DDIMSolver(
         noise_scheduler.alphas_cumprod.numpy(),
         timesteps=noise_scheduler.config.num_train_timesteps,
-        ddim_timesteps=cfg.TRAIN.num_ddim_timesteps,
-    )
+        ddim_timesteps=cfg.TRAIN.num_ddim_timesteps)
 
     base_model.to(device)
 
@@ -237,31 +237,32 @@ def main():
     logging.info(f"  Total optimization steps = {cfg.TRAIN.max_train_steps}")
 
     global_step = 0
-    first_epoch = 0
-
-    progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
 
     @torch.no_grad()
     def validation():
         base_model.eval()
+        val_loss_list = []
         for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
-            base_model.allsplit_step('test', val_batch)
+            val_loss_dict = base_model.allsplit_step(split='val', batch=val_batch)
+            val_loss_list.append(val_loss_dict)
         metrics = base_model.allsplit_epoch_end()
+        metrics[f"val_loss"] = sum([d['loss'] for d in val_loss_list]).item() / len(val_dataloader)
         max_val_rp1 = metrics['Metrics/R_precision_top_1']
         min_val_fid = metrics['Metrics/FID']
-        print_table(f'Metrics@Step-{global_step}', metrics)
+        print_table(f'Validation@Step-{global_step}', metrics)
         for k, v in metrics.items():
             if cfg.vis == "tb":
                 writer.add_scalar(k, v, global_step=global_step)
             elif cfg.vis == "swanlab":
-                run.log({k: v}, step=global_step)
+                writer.log({k: v}, step=global_step)
         base_model.train()
         return max_val_rp1, min_val_fid
 
     max_rp1, min_fid = validation()
 
-    for epoch in range(first_epoch, cfg.TRAIN.max_train_epochs):
+    progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
+    while True:
         for step, batch in enumerate(train_dataloader):
             batch = move_batch_to_device(batch, device)
             feats_ref = batch["motion"]
@@ -379,6 +380,8 @@ def main():
                     torch.sqrt(
                         (model_pred.float() - target.float()) ** 2 + cfg.TRAIN.huber_c ** 2) - cfg.TRAIN.huber_c
                 )
+            else:
+                raise ValueError(f'Unknown loss type: {cfg.TRAIN.loss_type}.')
 
             # Back propagate on the online student model (`unet`)
             loss.backward()
@@ -425,15 +428,14 @@ def main():
                 writer.add_scalar('loss', logs['loss'], global_step=global_step)
                 writer.add_scalar('lr', logs['lr'], global_step=global_step)
             elif cfg.vis == "swanlab":
-                run.log({'loss': logs['loss'], 'lr': logs['lr']}, step=global_step)
-            
-            if global_step >= cfg.TRAIN.max_train_steps:
-                break
+                writer.log({'loss': logs['loss'], 'lr': logs['lr']}, step=global_step)
 
-    save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-last.ckpt")
-    ckpt = dict(state_dict=base_model.state_dict())
-    base_model.on_save_checkpoint(ckpt)
-    torch.save(ckpt, save_path)
+            if global_step >= cfg.TRAIN.max_train_steps:
+                save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-last.ckpt")
+                ckpt = dict(state_dict=base_model.state_dict())
+                base_model.on_save_checkpoint(ckpt)
+                torch.save(ckpt, save_path)
+                exit(0)
 
 
 if __name__ == "__main__":
