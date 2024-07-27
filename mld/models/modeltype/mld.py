@@ -377,7 +377,6 @@ class MLD(BaseModel):
         pos_ohot = batch["pos_ohot"].detach().clone()
         text_lengths = batch["text_len"].detach().clone()
 
-        # start time
         start = time.time()
 
         if self.datamodule.is_mm:
@@ -408,9 +407,8 @@ class MLD(BaseModel):
             vae_et = time.time()
             self.vae_decode_times.append(vae_et - vae_st)
 
-        self.all_lengths.extend(lengths)
+        self.frames.extend(lengths)
 
-        # end time
         end = time.time()
         self.times.append(end - start)
 

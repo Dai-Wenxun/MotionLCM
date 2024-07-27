@@ -35,8 +35,9 @@ def main():
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
     elif cfg.vis == "swanlab":
-        run = swanlab.init(project="MotionLCM", experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
-                           suffix=None, config=cfg, logdir=output_dir)
+        writer = swanlab.init(project="MotionLCM",
+                              experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
+                              suffix=None, config=dict(**cfg), logdir=output_dir)
     else:
         raise ValueError(f"Invalid vis method: {cfg.vis}")
 
@@ -100,7 +101,6 @@ def main():
     logging.info(f"  Total optimization steps = {cfg.TRAIN.max_train_steps}")
 
     global_step = 0
-    progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
 
     @torch.no_grad()
     def validation():
@@ -120,12 +120,13 @@ def main():
             if cfg.vis == "tb":
                 writer.add_scalar(mk, mv, global_step=global_step)
             elif cfg.vis == "swanlab":
-                run.log({mk: mv}, step=global_step)
+                writer.log({mk: mv}, step=global_step)
         model.vae.train()
         return max_val_mpjpe, min_val_fid
 
     min_mpjpe, min_fid = validation()
 
+    progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
     while True:
         for step, batch in enumerate(train_dataloader):
             batch = move_batch_to_device(batch, device)
@@ -181,9 +182,9 @@ def main():
             progress_bar.set_postfix(**logs)
             for k, v in logs.items():
                 if cfg.vis == "tb":
-                    writer.add_scalar(k, v, global_step=global_step)
+                    writer.add_scalar(f"Train/{k}", v, global_step=global_step)
                 elif cfg.vis == "swanlab":
-                    run.log({k: v}, step=global_step)
+                    writer.log({f"Train/{k}": v}, step=global_step)
 
             if global_step >= cfg.TRAIN.max_train_steps:
                 save_path = os.path.join(output_dir, 'checkpoints', "checkpoint-last.ckpt")
