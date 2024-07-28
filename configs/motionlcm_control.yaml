@@ -57,9 +57,8 @@ DATASET:
     FRAME_RATE: 20.0
     UNIT_LEN: 4
     ROOT: './datasets/humanml3d'
-    SPLIT_ROOT: './datasets/humanml3d'
   SAMPLER:
-    MAX_LEN: 196
+    MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
 

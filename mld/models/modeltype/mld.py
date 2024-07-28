@@ -46,11 +46,11 @@ class MLD(BaseModel):
 
         self.feats2joints = datamodule.feats2joints
 
-        self.is_controlnet = cfg.model.is_controlnet
         self.alphas = torch.sqrt(self.noise_scheduler.alphas_cumprod)
         self.sigmas = torch.sqrt(1 - self.noise_scheduler.alphas_cumprod)
-
         self.l2_loss = lambda a, b: (a - b) ** 2
+
+        self.is_controlnet = cfg.model.is_controlnet
         if self.is_controlnet:
             c_cfg = self.cfg.model.denoiser.copy()
             c_cfg['params']['is_controlnet'] = True

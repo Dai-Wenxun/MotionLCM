@@ -35,8 +35,9 @@ def main():
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
     elif cfg.vis == "swanlab":
-        run = swanlab.init(project="MotionLCM", experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
-                           suffix=None, config=cfg, logdir=output_dir)
+        writer = swanlab.init(project="MotionLCM",
+                              experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
+                              suffix=None, config=dict(**cfg), logdir=output_dir)
     else:
         raise ValueError(f"Invalid vis method: {cfg.vis}")
 
@@ -56,9 +57,9 @@ def main():
 
     assert cfg.model.is_controlnet, "cfg.model.is_controlnet must be true for controlling!"
 
-    datasets = get_datasets(cfg)[0]
-    train_dataloader = datasets.train_dataloader()
-    val_dataloader = datasets.val_dataloader()
+    dataset = get_dataset(cfg)
+    train_dataloader = dataset.train_dataloader()
+    val_dataloader = dataset.val_dataloader()
 
     logger.info(f"Loading pretrained model: {cfg.TRAIN.PRETRAINED}")
     state_dict = torch.load(cfg.TRAIN.PRETRAINED, map_location="cpu")["state_dict"]
@@ -70,7 +71,7 @@ def main():
         cfg.model.denoiser.params.time_cond_proj_dim = time_cond_proj_dim
     logger.info(f'Is LCM: {is_lcm}')
 
-    model = MLD(cfg, datasets)
+    model = MLD(cfg, dataset)
     logger.info(model.load_state_dict(state_dict, strict=False))
     logger.info(model.controlnet.load_state_dict(model.denoiser.state_dict(), strict=False))
 
@@ -123,35 +124,35 @@ def main():
     logging.info(f"  Total optimization steps = {cfg.TRAIN.max_train_steps}")
 
     global_step = 0
-    first_epoch = 0
-
-    progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
 
     @torch.no_grad()
     def validation():
         model.controlnet.eval()
         model.traj_encoder.eval()
-
+        val_loss_list = []
         for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
-            model.allsplit_step('test', val_batch)
+            val_loss_dict = model.allsplit_step(split='val', batch=val_batch)
+            val_loss_list.append(val_loss_dict)
         metrics = model.allsplit_epoch_end()
+        for loss_k in val_loss_list[0].keys():
+            metrics[f"Val/{loss_k}"] = sum([d[loss_k] for d in val_loss_list]).item() / len(val_dataloader)
         min_val_km = metrics['Metrics/kps_mean_err(m)']
         min_val_tj = metrics['Metrics/traj_fail_50cm']
-        print_table(f'Metrics@Step-{global_step}', metrics)
-        for k, v in metrics.items():
+        print_table(f'Validation@Step-{global_step}', metrics)
+        for mk, mv in metrics.items():
             if cfg.vis == "tb":
-                writer.add_scalar(k, v, global_step=global_step)         
+                writer.add_scalar(mk, mv, global_step=global_step)
             elif cfg.vis == "swanlab":            
-                run.log({k: v}, step=global_step)
-
+                writer.log({mk: mv}, step=global_step)
         model.controlnet.train()
         model.traj_encoder.train()
         return min_val_km, min_val_tj
 
     min_km, min_tj = validation()
 
-    for epoch in range(first_epoch, cfg.TRAIN.max_train_epochs):
+    progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
+    while True:
         for step, batch in enumerate(train_dataloader):
             batch = move_batch_to_device(batch, device)
             loss_dict = model.allsplit_step('train', batch)
@@ -159,7 +160,7 @@ def main():
             diff_loss = loss_dict['diff_loss']
             cond_loss = loss_dict['cond_loss']
             rot_loss = loss_dict['rot_loss']
-            loss = diff_loss + cond_loss + rot_loss
+            loss = loss_dict['loss']
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(params, cfg.TRAIN.max_grad_norm)
@@ -195,22 +196,21 @@ def main():
                     torch.save(ckpt, save_path)
                     logger.info(f"Saved state to {save_path} with tj:{round(cur_tj, 3)}")
 
-            logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0],
-                    "diff_loss": diff_loss.detach().item(), 'cond_loss': cond_loss.detach().item(), 'rot_loss': rot_loss.detach().item()}
+            logs = {"loss": loss.item(), "lr": lr_scheduler.get_last_lr()[0],
+                    "diff_loss": diff_loss.item(), 'cond_loss': cond_loss.item(), 'rot_loss': rot_loss.item()}
             progress_bar.set_postfix(**logs)
             for k, v in logs.items():
                 if cfg.vis == "tb":
                     writer.add_scalar(k, v, global_step=global_step)         
                 elif cfg.vis == "swanlab":            
-                    run.log({k: v}, step=global_step)
+                    writer.log({k: v}, step=global_step)
 
             if global_step >= cfg.TRAIN.max_train_steps:
-                break
-
-    save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-last.ckpt")
-    ckpt = dict(state_dict=model.state_dict())
-    model.on_save_checkpoint(ckpt)
-    torch.save(ckpt, save_path)
+                save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-last.ckpt")
+                ckpt = dict(state_dict=model.state_dict())
+                model.on_save_checkpoint(ckpt)
+                torch.save(ckpt, save_path)
+                exit(0)
 
 
 if __name__ == "__main__":
