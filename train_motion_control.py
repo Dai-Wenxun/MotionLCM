@@ -201,9 +201,9 @@ def main():
             progress_bar.set_postfix(**logs)
             for k, v in logs.items():
                 if cfg.vis == "tb":
-                    writer.add_scalar(k, v, global_step=global_step)         
-                elif cfg.vis == "swanlab":            
-                    writer.log({k: v}, step=global_step)
+                    writer.add_scalar(f"Train/{k}", v, global_step=global_step)
+                elif cfg.vis == "swanlab":
+                    writer.log({f"Train/{k}": v}, step=global_step)
 
             if global_step >= cfg.TRAIN.max_train_steps:
                 save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-last.ckpt")
