@@ -311,16 +311,8 @@ class MLD(BaseModel):
             # LCM
             model_pred = n_set['model_pred']
             target = n_set['model_gt']
-
-            if self.cfg.TRAIN.loss_type == "l2":
-                diff_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-            elif self.cfg.TRAIN.loss_type == "huber":
-                diff_loss = torch.mean(
-                    torch.sqrt(
-                        (model_pred.float() - target.float()) ** 2 + self.cfg.TRAIN.huber_c ** 2) - self.cfg.TRAIN.huber_c
-                )
-            else:
-                raise ValueError(f'Unknown loss type: {self.cfg.TRAIN.loss_type}.')
+            # Performance comparison: l2 loss > huber loss
+            diff_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
         else:
             # DM
             model_pred = n_set['noise']

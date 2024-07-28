@@ -241,13 +241,10 @@ def main():
     @torch.no_grad()
     def validation():
         base_model.eval()
-        val_loss_list = []
         for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
-            val_loss_dict = base_model.allsplit_step(split='val', batch=val_batch)
-            val_loss_list.append(val_loss_dict)
+            base_model.allsplit_step(split='test', batch=val_batch)
         metrics = base_model.allsplit_epoch_end()
-        metrics[f"val_loss"] = sum([d['loss'] for d in val_loss_list]).item() / len(val_dataloader)
         max_val_rp1 = metrics['Metrics/R_precision_top_1']
         min_val_fid = metrics['Metrics/FID']
         print_table(f'Validation@Step-{global_step}', metrics)
