@@ -4,7 +4,7 @@ TEST_FOLDER: './experiments_control_test'
 NAME: 'motionlcm_humanml'
 
 TRAIN:
-  DATASETS: ['humanml3d']
+  DATASET: 'humanml3d'
   BATCH_SIZE: 128
   SPLIT: 'train'
   NUM_WORKERS: 8
@@ -28,14 +28,14 @@ TRAIN:
   adam_epsilon: 1e-08
   max_grad_norm: 1.0
 
-EVAL:
-  DATASETS: ['humanml3d']
+VAL:
+  DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
 TEST:
-  DATASETS: ['humanml3d']
+  DATASET: 'humanml3d'
   BATCH_SIZE: 1
   SPLIT: 'test'
   NUM_WORKERS: 12
