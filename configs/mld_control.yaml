@@ -4,7 +4,7 @@ TEST_FOLDER: './experiments_control_test'
 NAME: 'mld_humanml'
 
 TRAIN:
-  DATASETS: ['humanml3d']
+  DATASET: 'humanml3d'
   BATCH_SIZE: 128
   SPLIT: 'train'
   NUM_WORKERS: 8
@@ -28,14 +28,14 @@ TRAIN:
   adam_epsilon: 1e-08
   max_grad_norm: 1.0
 
-EVAL:
-  DATASETS: ['humanml3d']
+VAL:
+  DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
 TEST:
-  DATASETS: ['humanml3d']
+  DATASET: 'humanml3d'
   BATCH_SIZE: 1
   SPLIT: 'test'
   NUM_WORKERS: 12
@@ -54,13 +54,11 @@ DATASET:
   SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
-    PICK_ONE_TEXT: true
     FRAME_RATE: 20.0
     UNIT_LEN: 4
     ROOT: './datasets/humanml3d'
-    SPLIT_ROOT: './datasets/humanml3d'
   SAMPLER:
-    MAX_LEN: 196
+    MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
 
