@@ -18,6 +18,8 @@ from mld.models.modeltype.mld import MLD
 from mld.models.modeltype.vae import VAE
 from mld.utils.utils import print_table, set_seed, move_batch_to_device
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 def get_metric_statistics(values: np.ndarray, replication_times: int) -> tuple:
     mean = np.mean(values, axis=0)
@@ -116,7 +118,8 @@ def main():
             # mm metrics
             logger.info(f"Evaluating MultiModality - Replication {i}")
             dataset.mm_mode(True)
-            mm_metrics = test_one_epoch(model, test_dataloader, device)
+            test_mm_dataloader = dataset.test_dataloader()
+            mm_metrics = test_one_epoch(model, test_mm_dataloader, device)
             metrics.update(mm_metrics)
             dataset.mm_mode(False)
 

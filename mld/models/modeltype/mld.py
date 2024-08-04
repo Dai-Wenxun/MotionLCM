@@ -146,8 +146,7 @@ class MLD(BaseModel):
         latents = torch.randn(
             (bsz, self.latent_dim[0], self.latent_dim[-1]),
             device=encoder_hidden_states.device,
-            dtype=torch.float,
-        )
+            dtype=torch.float)
 
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
@@ -374,17 +373,17 @@ class MLD(BaseModel):
 
     def t2m_eval(self, batch: dict) -> dict:
         texts = batch["text"]
-        motions = batch["motion"].detach().clone()
+        feats_ref = batch["motion"]
         lengths = batch["length"]
-        word_embs = batch["word_embs"].detach().clone()
-        pos_ohot = batch["pos_ohot"].detach().clone()
-        text_lengths = batch["text_len"].detach().clone()
+        word_embs = batch["word_embs"]
+        pos_ohot = batch["pos_ohot"]
+        text_lengths = batch["text_len"]
 
         start = time.time()
 
         if self.datamodule.is_mm:
             texts = texts * self.cfg.TEST.MM_NUM_REPEATS
-            motions = motions.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
+            feats_ref = feats_ref.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
             lengths = lengths * self.cfg.TEST.MM_NUM_REPEATS
             word_embs = word_embs.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
             pos_ohot = pos_ohot.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
@@ -417,17 +416,17 @@ class MLD(BaseModel):
 
         # joints recover
         joints_rst = self.feats2joints(feats_rst)
-        joints_ref = self.feats2joints(motions)
+        joints_ref = self.feats2joints(feats_ref)
 
         # renorm for t2m evaluators
         feats_rst = self.datamodule.renorm4t2m(feats_rst)
-        motions = self.datamodule.renorm4t2m(motions)
+        feats_ref = self.datamodule.renorm4t2m(feats_ref)
 
         # t2m motion encoder
         m_lens = lengths.copy()
-        m_lens = torch.tensor(m_lens, device=motions.device)
+        m_lens = torch.tensor(m_lens, device=feats_ref.device)
         align_idx = np.argsort(m_lens.data.tolist())[::-1].copy()
-        motions = motions[align_idx]
+        feats_ref = feats_ref[align_idx]
         feats_rst = feats_rst[align_idx]
         m_lens = m_lens[align_idx]
         m_lens = torch.div(m_lens, self.cfg.DATASET.HUMANML3D.UNIT_LEN,
@@ -435,21 +434,20 @@ class MLD(BaseModel):
 
         recons_mov = self.t2m_moveencoder(feats_rst[..., :-4]).detach()
         recons_emb = self.t2m_motionencoder(recons_mov, m_lens)
-        motion_mov = self.t2m_moveencoder(motions[..., :-4]).detach()
+        motion_mov = self.t2m_moveencoder(feats_ref[..., :-4]).detach()
         motion_emb = self.t2m_motionencoder(motion_mov, m_lens)
 
         # t2m text encoder
-        text_emb = self.t2m_textencoder(word_embs, pos_ohot,
-                                        text_lengths)[align_idx]
+        text_emb = self.t2m_textencoder(word_embs, pos_ohot, text_lengths)[align_idx]
 
         rs_set = {
-            "m_ref": motions,
+            "m_ref": feats_ref,
             "m_rst": feats_rst,
             "lat_t": text_emb,
             "lat_m": motion_emb,
             "lat_rm": recons_emb,
             "joints_ref": joints_ref,
-            "joints_rst": joints_rst,
+            "joints_rst": joints_rst
         }
 
         if 'hint' in batch:
@@ -468,7 +466,12 @@ class MLD(BaseModel):
         if split in ["test", "val"]:
             rs_set = self.t2m_eval(batch)
 
-            for metric in self.metric_list:
+            if self.datamodule.is_mm:
+                metric_list = ['MMMetrics']
+            else:
+                metric_list = self.metric_list
+
+            for metric in metric_list:
                 if metric == "TM2TMetrics":
                     getattr(self, metric).update(
                         rs_set["lat_t"],
@@ -476,8 +479,7 @@ class MLD(BaseModel):
                         rs_set["lat_m"],
                         batch["length"])
                 elif metric == "MMMetrics" and self.datamodule.is_mm:
-                    getattr(self, metric).update(rs_set["lat_rm"].unsqueeze(0),
-                                                 batch["length"])
+                    getattr(self, metric).update(rs_set["lat_rm"].unsqueeze(0), batch["length"])
                 elif metric == 'ControlMetrics':
                     assert rs_set['hint'] is not None
                     getattr(self, metric).update(rs_set["joints_rst"], rs_set['hint'],

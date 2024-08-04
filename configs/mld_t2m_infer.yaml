@@ -4,20 +4,20 @@ TEST_FOLDER: './experiments_t2m_test'
 NAME: 'mld_humanml'
 
 TRAIN:
-  DATASETS: ['humanml3d']
+  DATASET: 'humanml3d'
   BATCH_SIZE: 1
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
   SEED_VALUE: 1234
 
-EVAL:
-  DATASETS: ['humanml3d']
+VAL:
+  DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: test
   NUM_WORKERS: 12
 
 TEST:
-  DATASETS: ['humanml3d']
+  DATASET: 'humanml3d'
   SPLIT: test
   BATCH_SIZE: 1
   NUM_WORKERS: 12
@@ -35,13 +35,11 @@ DATASET:
   SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
-    PICK_ONE_TEXT: true
     FRAME_RATE: 20.0
     UNIT_LEN: 4
     ROOT: './datasets/humanml3d'
-    SPLIT_ROOT: './datasets/humanml3d'
   SAMPLER:
-    MAX_LEN: 196
+    MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
 
@@ -53,6 +51,7 @@ model:
   target: 'modules_mld'
   latent_dim: [1, 256]
   guidance_scale: 7.5
+  guidance_uncondp: 0.0
 
   t2m_textencoder:
     dim_word: 300
