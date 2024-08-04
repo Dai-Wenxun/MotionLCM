@@ -60,32 +60,31 @@ class BaseModel(nn.Module):
             p.requires_grad = False
 
     def test_step(self, batch: dict) -> None:
-        test_batch_size = self.cfg.TEST.BATCH_SIZE
-        total_samples = test_batch_size * len(self.times)
+        total_samples = len(self.frames)
         message = ''
         if len(self.times) > 0:
-            inference_aits = round(np.mean(self.times) / test_batch_size, 5)
+            inference_aits = round(np.sum(self.times) / total_samples, 5)
             message += f"\nAverage Inference Time per Sentence ({total_samples}): {inference_aits}\n"
 
         if len(self.text_encoder_times) > 0:
-            inference_aits_text = round(np.mean(self.text_encoder_times) / test_batch_size, 5)
+            inference_aits_text = round(np.sum(self.text_encoder_times) / total_samples, 5)
             message += f"Average Inference Time per Sentence [Text]: {inference_aits_text}\n"
 
         if len(self.diffusion_times) > 0:
-            inference_aits_diff = round(np.mean(self.diffusion_times) / test_batch_size, 5)
+            inference_aits_diff = round(np.sum(self.diffusion_times) / total_samples, 5)
             message += f"Average Inference Time per Sentence [Diffusion]: {inference_aits_diff}\n"
 
         if len(self.vae_encode_times) > 0:
-            inference_aits_vae_e = round(np.mean(self.vae_encode_times) / test_batch_size, 5)
+            inference_aits_vae_e = round(np.sum(self.vae_encode_times) / total_samples, 5)
             message += f"Average Inference Time per Sentence [VAE Encode]: {inference_aits_vae_e}\n"
 
         if len(self.vae_decode_times) > 0:
-            inference_aits_vae_d = round(np.mean(self.vae_decode_times) / test_batch_size, 5)
+            inference_aits_vae_d = round(np.sum(self.vae_decode_times) / total_samples, 5)
             message += f"Average Inference Time per Sentence [VAE Decode]: {inference_aits_vae_d}\n"
 
         if len(self.frames) > 0:
             message += f"Average length: {round(np.mean(self.frames), 5)}\n"
-            message += f"FPS: {sum(self.frames) / sum(self.times)}\n"
+            message += f"FPS: {np.sum(self.frames) / np.sum(self.times)}\n"
 
         if message:
             print(message)

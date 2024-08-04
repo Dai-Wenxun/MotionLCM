@@ -102,19 +102,13 @@ def main():
 
     all_metrics = {}
     replication_times = cfg.TEST.REPLICATION_TIMES
-    max_num_samples = cfg.TEST.get('MAX_NUM_SAMPLES', len(test_dataloader.dataset))
-    name_list = test_dataloader.dataset.name_list
     # calculate metrics
     for i in range(replication_times):
-        chosen_list = np.random.choice(name_list, max_num_samples, replace=False)
-        test_dataloader.dataset.name_list = chosen_list
-
         metrics_type = ", ".join(cfg.METRIC.TYPE)
         logger.info(f"Evaluating {metrics_type} - Replication {i}")
         metrics = test_one_epoch(model, test_dataloader, device)
 
         if "TM2TMetrics" in metrics_type and "PosMetrics" not in metrics_type:
-            test_dataloader.dataset.name_list = name_list
             # mm metrics
             logger.info(f"Evaluating MultiModality - Replication {i}")
             dataset.mm_mode(True)
