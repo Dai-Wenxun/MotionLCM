@@ -41,6 +41,7 @@ Experimental results demonstrate the remarkable generation and controlling capab
 
 ## 📢 News
 
+- **[2024/08/09]** Support the training of motion VAE.
 - **[2024/07/02]** MotionLCM is officially accepted by **ECCV 2024**.
 - **[2024/05/01]** Upload paper and release code.
 
@@ -327,6 +328,15 @@ Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the 
 
 ```
 python -m train_motion_control --cfg configs/motionlcm_control.yaml
+```
+
+
+#### 2.3. Ready to train motion VAE (optional)
+
+Please update the parameters in `configs/vae.yaml`. Then, run the following command (**15GB usage**):
+
+```
+python -m train_vae --cfg configs/vae.yaml
 ```
 
 </details>
