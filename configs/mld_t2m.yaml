@@ -5,10 +5,27 @@ NAME: 'mld_humanml'
 
 TRAIN:
   DATASET: 'humanml3d'
-  BATCH_SIZE: 1
+  BATCH_SIZE: 64
+  SPLIT: 'train'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
   SEED_VALUE: 1234
+  PRETRAINED: 'experiments_recons/vae_humanml/vae_humanml.ckpt'
+
+  validation_steps: -1
+  validation_epochs: 50
+  checkpointing_steps: -1
+  checkpointing_epochs: 50
+  max_train_steps: -1
+  max_train_epochs: 2000
+  learning_rate: 1e-4
+  lr_scheduler: "cosine"
+  lr_warmup_steps: 1000
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_weight_decay: 0.0
+  adam_epsilon: 1e-08
+  max_grad_norm: 1.0
 
 VAL:
   DATASET: 'humanml3d'
@@ -51,7 +68,8 @@ model:
   target: 'modules_mld'
   latent_dim: [1, 256]
   guidance_scale: 7.5
-  guidance_uncondp: 0.0
+  guidance_uncondp: 0.1
+  is_controlnet: false
 
   t2m_textencoder:
     dim_word: 300

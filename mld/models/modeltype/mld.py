@@ -241,12 +241,11 @@ class MLD(BaseModel):
             0,
             self.noise_scheduler.config.num_train_timesteps,
             (bsz,),
-            device=latents.device,
+            device=latents.device
         )
         timesteps = timesteps.long()
         # Add noise to the latents according to the noise magnitude at each timestep
-        noisy_latents = self.noise_scheduler.add_noise(latents.clone(), noise,
-                                                       timesteps)
+        noisy_latents = self.noise_scheduler.add_noise(latents.clone(), noise, timesteps)
 
         controlnet_residuals = None
         if self.is_controlnet:
