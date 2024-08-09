@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 import torch
 
 from mld.config import parse_args
-from mld.data.get_data import get_datasets
+from mld.data.get_data import get_dataset
 from mld.models.modeltype.mld import MLD
 from mld.utils.utils import set_seed, move_batch_to_device
 from mld.data.humanml.utils.plot_script import plot_3d_motion
@@ -71,8 +71,8 @@ def main():
     cfg.model.is_controlnet = is_controlnet
     logger.info(f'Is Controlnet: {is_controlnet}')
 
-    datasets = get_datasets(cfg, phase="test")[0]
-    model = MLD(cfg, datasets)
+    dataset = get_dataset(cfg, phase="test")
+    model = MLD(cfg, dataset)
     model.to(device)
     model.eval()
     model.load_state_dict(state_dict)
