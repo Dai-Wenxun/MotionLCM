@@ -4,6 +4,8 @@ import json
 import datetime
 import logging
 import os.path as osp
+from typing import Union
+
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -29,7 +31,7 @@ def get_metric_statistics(values: np.ndarray, replication_times: int) -> tuple:
 
 
 @torch.no_grad()
-def test_one_epoch(model: MLD, dataloader: DataLoader, device: torch.device) -> dict:
+def test_one_epoch(model: Union[VAE, MLD], dataloader: DataLoader, device: torch.device) -> dict:
     for batch in tqdm(dataloader):
         batch = move_batch_to_device(batch, device)
         model.test_step(batch)
