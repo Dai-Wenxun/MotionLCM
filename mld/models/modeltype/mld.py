@@ -310,12 +310,12 @@ class MLD(BaseModel):
             model_pred = n_set['model_pred']
             target = n_set['model_gt']
             # Performance comparison: l2 loss > huber loss
-            diff_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+            diff_loss = F.mse_loss(model_pred, target, reduction="mean")
         else:
             # DM
-            model_pred = n_set['noise']
-            target = n_set['noise_pred']
-            diff_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+            model_pred = n_set['noise_pred']
+            target = n_set['noise']
+            diff_loss = F.mse_loss(model_pred, target, reduction="mean")
 
         loss_dict['diff_loss'] = diff_loss
 
