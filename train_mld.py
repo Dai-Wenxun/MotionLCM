@@ -75,6 +75,7 @@ def main():
     logger.info("learning_rate: {}".format(cfg.TRAIN.learning_rate))
     optimizer = torch.optim.AdamW(
         model.denoiser.parameters(),
+        lr=cfg.TRAIN.learning_rate,
         betas=(cfg.TRAIN.adam_beta1, cfg.TRAIN.adam_beta2),
         weight_decay=cfg.TRAIN.adam_weight_decay,
         eps=cfg.TRAIN.adam_epsilon)
