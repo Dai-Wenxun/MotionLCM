@@ -313,9 +313,20 @@ The parameters required for model training and testing are recorded in the corre
 </details>
 
 <details>
-  <summary><b> 2. Train MotionLCM and ControlNet </b></summary>
+  <summary><b> 2. Train MotionLCM and motion ControlNet </b></summary>
 
-#### 2.1. Ready to train MotionLCM model
+#### 2.1. Ready to train motion VAE and MLD (optional)
+
+Please update the parameters in `configs/vae.yaml` and `configs/mld_t2m.yaml`. Then, run the following commands:
+
+```
+python -m train_vae --cfg configs/vae.yaml
+python -m train_mld --cfg configs/mld_t2m.yaml
+```
+
+This step is **OPTIONAL** since we provide pre-trained models for training MotionLCM and motion ControlNet.
+
+#### 2.2. Ready to train MotionLCM
 
 Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command (**13GB usage**):
 
@@ -323,29 +334,12 @@ Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the
 python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
 ```
 
-#### 2.2. Ready to train motion ControlNet
+#### 2.3. Ready to train motion ControlNet
 
 Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the following command (**16GB usage**):
 
 ```
 python -m train_motion_control --cfg configs/motionlcm_control.yaml
-```
-
-
-#### 2.3. Ready to train motion VAE (optional)
-
-Please update the parameters in `configs/vae.yaml`. Then, run the following command:
-
-```
-python -m train_vae --cfg configs/vae.yaml
-```
-
-#### 2.4. Ready to train MLD (optional)
-
-Please update the parameters in `configs/mld_t2m.yaml`. Then, run the following command:
-
-```
-python -m train_mld --cfg configs/mld_t2m.yaml
 ```
 
 </details>
