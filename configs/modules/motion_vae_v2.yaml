@@ -1,0 +1,13 @@
+motion_vae:
+  target: mld.models.architectures.mld_vae.MldVaeV2
+  params:
+    down_t: 2
+    stride_t: 2
+    depth: 3
+    dilation_growth_rate: 3
+    activation: 'relu'
+    norm: None
+    norm_groups: 32
+    norm_eps: 1e-6
+    latent_dim: ${model.latent_dim}
+    nfeats: ${DATASET.NFEATS}
