@@ -39,7 +39,7 @@ TEST:
   SPLIT: 'test'
   NUM_WORKERS: 12
 
-  CHECKPOINTS: 'experiments_recons/vae_humanml/vae_humanml.ckpt'
+  CHECKPOINTS: ''
 
   # Testing Args
   REPLICATION_TIMES: 20
