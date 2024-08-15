@@ -1,5 +1,0 @@
-text_encoder:
-  target: mld.models.architectures.mld_clip.MldTextEncoder
-  params:
-    last_hidden_state: false # if true, the last hidden state is used as the text embedding
-    modelpath: ${model.t5_path}

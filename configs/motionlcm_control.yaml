@@ -66,7 +66,7 @@ METRIC:
   TYPE: ['TM2TMetrics', 'ControlMetrics']
 
 model:
-  target: 'modules'
+  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_lcm', 'traj_encoder']
   latent_dim: [1, 256]
   guidance_scale: 7.5
   guidance_uncondp: 0.0

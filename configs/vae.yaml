@@ -62,7 +62,7 @@ METRIC:
   TYPE: ['TM2TMetrics', "PosMetrics"]
 
 model:
-  target: 'modules'
+  target: ['motion_vae']
   latent_dim: [1, 256]
 
   # VAE Args

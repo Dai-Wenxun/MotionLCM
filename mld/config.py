@@ -6,12 +6,12 @@ from argparse import ArgumentParser
 from omegaconf import OmegaConf, DictConfig
 
 
-def get_module_config(cfg_model: DictConfig, path: str = "modules") -> DictConfig:
-    files = os.listdir(f'./configs/{path}/')
+def get_module_config(cfg_model: DictConfig, paths: list[str]) -> DictConfig:
+    files = [os.path.join('./configs/modules', p+'.yaml') for p in paths]
     for file in files:
-        if file.endswith('.yaml'):
-            with open(f'./configs/{path}/' + file, 'r') as f:
-                cfg_model.merge_with(OmegaConf.load(f))
+        assert os.path.exists(file), f'{file} is not exists.'
+        with open(file, 'r') as f:
+            cfg_model.merge_with(OmegaConf.load(f))
     return cfg_model
 
 
