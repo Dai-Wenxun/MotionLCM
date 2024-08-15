@@ -6,8 +6,8 @@ NAME: 'vae_humanml'
 TRAIN:
   DATASET: 'humanml3d'
   BATCH_SIZE: 128
-  SPLIT: 'test'
-  NUM_WORKERS: 1
+  SPLIT: 'train'
+  NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
   SEED_VALUE: 1234
   PRETRAINED: ''
@@ -31,13 +31,13 @@ VAL:
   DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: 'test'
-  NUM_WORKERS: 1
+  NUM_WORKERS: 12
 
 TEST:
   DATASET: 'humanml3d'
   BATCH_SIZE: 1
   SPLIT: 'test'
-  NUM_WORKERS: 1
+  NUM_WORKERS: 12
 
   CHECKPOINTS: ''
 
