@@ -41,6 +41,7 @@ Experimental results demonstrate the remarkable generation and controlling capab
 
 ## 📢 News
 
+- **[2024/08/15]** Support the training of motion latent diffusion model (MLD).
 - **[2024/08/09]** Support the training of motion VAE.
 - **[2024/07/02]** MotionLCM is officially accepted by **ECCV 2024**.
 - **[2024/05/01]** Upload paper and release code.
@@ -333,10 +334,18 @@ python -m train_motion_control --cfg configs/motionlcm_control.yaml
 
 #### 2.3. Ready to train motion VAE (optional)
 
-Please update the parameters in `configs/vae.yaml`. Then, run the following command (**15GB usage**):
+Please update the parameters in `configs/vae.yaml`. Then, run the following command:
 
 ```
 python -m train_vae --cfg configs/vae.yaml
+```
+
+#### 2.4. Ready to train MLD (optional)
+
+Please update the parameters in `configs/mld_t2m.yaml`. Then, run the following command:
+
+```
+python -m train_mld --cfg configs/mld_t2m.yaml
 ```
 
 </details>
