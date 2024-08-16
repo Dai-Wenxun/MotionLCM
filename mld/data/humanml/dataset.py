@@ -272,9 +272,8 @@ class Text2MotionDatasetV2(data.Dataset):
         "Z Normalization"
         motion = (motion - self.mean) / self.std
 
-        # debug check nan
-        if np.any(np.isnan(motion)):
-            raise ValueError("nan in motion")
+        if m_length < self.max_motion_length:
+            motion = np.concatenate([motion, np.zeros((self.max_motion_length - m_length, motion.shape[1]))], axis=0)
 
         return (
             word_embeddings,

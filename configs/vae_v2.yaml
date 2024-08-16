@@ -1,7 +1,7 @@
 FOLDER: './experiments_recons'
 TEST_FOLDER: './experiments_recons_test'
 
-NAME: 'vae_humanml'
+NAME: 'vae_v2_humanml'
 
 TRAIN:
   DATASET: 'humanml3d'
@@ -63,7 +63,6 @@ METRIC:
 
 model:
   target: ['motion_vae_v2']
-  latent_dim: [1, 256]
 
   # VAE Args
   rec_feats_ratio: 1.0
