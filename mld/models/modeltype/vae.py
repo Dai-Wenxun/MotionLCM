@@ -57,7 +57,12 @@ class VAE(BaseModel):
         z, dist_m = self.vae.encode(feats_ref, lengths)
         feats_rst = self.vae.decode(z, lengths)
 
-        loss_dict = dict(rec_feats_loss=0, rec_joints_loss=0, rec_velocity_loss=0, kl_loss=0)
+        loss_dict = dict(
+            rec_feats_loss=torch.tensor(0., device=z.device),
+            rec_joints_loss=torch.tensor(0., device=z.device),
+            rec_velocity_loss=torch.tensor(0., device=z.device),
+            kl_loss=torch.tensor(0., device=z.device))
+
         if self.rec_feats_ratio > 0:
             rec_feats_loss = F.smooth_l1_loss(feats_ref, feats_rst)
             loss_dict['rec_feats_loss'] = rec_feats_loss * self.rec_feats_ratio
