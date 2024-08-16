@@ -156,32 +156,32 @@ class MldVae(nn.Module):
 class MldVaeV2(nn.Module):
     def __init__(self,
                  nfeats: int,
-                 latent_dim: list = [1, 256],
+                 latent_dim: int,
                  down_t: int = 2,
                  stride_t: int = 2,
-                 depth: int = 3,
+                 n_depth: int = 3,
                  dilation_growth_rate: int = 3,
                  activation: str = 'relu',
+                 dropout: float = 0.2,
                  norm: Optional[str] = None,
                  norm_groups: int = 32,
                  norm_eps: float = 1e-6) -> None:
         super(MldVaeV2, self).__init__()
+        self.encoder = ResEncoder(nfeats, latent_dim, latent_dim, down_t, stride_t,
+                                  n_depth, dilation_growth_rate, activation=activation,
+                                  dropout=dropout, norm=norm, norm_groups=norm_groups,
+                                  norm_eps=norm_eps, double_z=True)
+        self.decoder = ResDecoder(nfeats, latent_dim, latent_dim, down_t, n_depth,
+                                  dilation_growth_rate, activation=activation, dropout=dropout,
+                                  norm=norm, norm_groups=norm_groups, norm_eps=norm_eps)
 
-        self.latent_size = latent_dim[0]
-        self.latent_dim = latent_dim[-1]
-
-        self.encoder = ResEncoder(nfeats, self.latent_dim, down_t, stride_t, depth, dilation_growth_rate,
-                                  activation=activation, norm=norm, norm_groups=norm_groups, norm_eps=norm_eps)
-        self.decoder = ResDecoder(nfeats, self.latent_dim, down_t, depth, dilation_growth_rate,
-                                  activation=activation, norm=norm, norm_groups=norm_groups, norm_eps=norm_eps)
-
-        self.quant_conv = nn.Conv1d(self.latent_dim, self.latent_dim * 2, 1)
-        self.post_quant_conv = nn.Conv1d(self.latent_dim, self.latent_dim, 1)
+        self.quant_conv = nn.Conv1d(latent_dim * 2, latent_dim * 2, 1)
+        self.post_quant_conv = nn.Conv1d(latent_dim, latent_dim, 1)
 
     def encode(self, features: torch.Tensor, *args, **kwargs) -> tuple[torch.Tensor, Distribution]:
-        x = self.encoder(features)
-        x = self.quant_conv(x)
-        mu, logvar = torch.chunk(x, 2, dim=1)
+        h = self.encoder(features)
+        moments = self.quant_conv(h)
+        mu, logvar = torch.chunk(moments, 2, dim=1)
         std = torch.exp(0.5 * logvar)
         dist = torch.distributions.Normal(mu, std)
         latent = dist.rsample()
