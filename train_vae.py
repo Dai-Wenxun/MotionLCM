@@ -134,6 +134,7 @@ def main():
 
             rec_feats_loss = loss_dict['rec_feats_loss']
             rec_joints_loss = loss_dict['rec_joints_loss']
+            rec_velocity_loss = loss_dict['rec_velocity_loss']
             kl_loss = loss_dict['kl_loss']
             loss = loss_dict['loss']
 
@@ -177,6 +178,7 @@ def main():
                     "lr": lr_scheduler.get_last_lr()[0],
                     "rec_feats_loss": rec_feats_loss.item(),
                     'rec_joints_loss': rec_joints_loss.item(),
+                    'rec_velocity_loss': rec_velocity_loss.item(),
                     'kl_loss': kl_loss.item()}
 
             progress_bar.set_postfix(**logs)
