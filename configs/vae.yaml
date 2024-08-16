@@ -67,8 +67,9 @@ model:
 
   # VAE Args
   rec_feats_ratio: 1.0
-  rec_joints_ratio: 1.0
-  kl_ratio: 1e-4
+  rec_joints_ratio: 0.0
+  rec_velocity_ratio: 0.0
+  kl_ratio: 0.0
 
   t2m_textencoder:
     dim_word: 300

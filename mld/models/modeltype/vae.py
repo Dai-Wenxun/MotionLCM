@@ -22,6 +22,7 @@ class VAE(BaseModel):
 
         self.cfg = cfg
         self.datamodule = datamodule
+        self.njoints = cfg.DATASET.NJOINTS
 
         self.vae = instantiate_from_config(cfg.model.motion_vae)
 
@@ -34,11 +35,13 @@ class VAE(BaseModel):
 
         self.rec_feats_ratio = cfg.model.rec_feats_ratio
         self.rec_joints_ratio = cfg.model.rec_joints_ratio
+        self.rec_velocity_ratio = cfg.model.rec_velocity_ratio
         self.kl_ratio = cfg.model.kl_ratio
 
         logger.info(f"latent_dim: {cfg.model.latent_dim}")
         logger.info(f"rec_feats_ratio: {self.rec_feats_ratio}, "
                     f"rec_joints_ratio: {self.rec_joints_ratio}, "
+                    f"rec_velocity_ratio: {self.rec_velocity_ratio}, "
                     f"kl_ratio: {self.kl_ratio}")
 
         self.summarize_parameters()
@@ -54,21 +57,29 @@ class VAE(BaseModel):
         z, dist_m = self.vae.encode(feats_ref, lengths)
         feats_rst = self.vae.decode(z, lengths)
 
-        joints_rst = self.feats2joints(feats_rst)
-        joints_ref = self.feats2joints(feats_ref)
+        loss_dict = dict(rec_feats_loss=0, rec_joints_loss=0, rec_velocity_loss=0, kl_loss=0)
+        if self.rec_feats_ratio > 0:
+            rec_feats_loss = F.smooth_l1_loss(feats_ref, feats_rst)
+            loss_dict['rec_feats_loss'] = rec_feats_loss * self.rec_feats_ratio
 
-        mu_ref = torch.zeros_like(dist_m.loc)
-        scale_ref = torch.ones_like(dist_m.scale)
-        dist_ref = torch.distributions.Normal(mu_ref, scale_ref)
+        if self.rec_joints_ratio > 0:
+            joints_rst = self.feats2joints(feats_rst)
+            joints_ref = self.feats2joints(feats_ref)
+            rec_joints_loss = F.smooth_l1_loss(joints_ref, joints_rst)
+            loss_dict['rec_joints_loss'] = rec_joints_loss * self.rec_joints_ratio
 
-        loss_dict = dict()
-        rec_feats_loss = F.smooth_l1_loss(feats_ref, feats_rst)
-        rec_joints_loss = F.smooth_l1_loss(joints_ref, joints_rst)
-        kl_loss = torch.distributions.kl_divergence(dist_m, dist_ref).mean()
+        if self.rec_velocity_ratio > 0:
+            rec_velocity_loss = F.smooth_l1_loss(feats_ref[..., 4: (self.njoints - 1) * 3 + 4],
+                                                 feats_rst[..., 4: (self.njoints - 1) * 3 + 4])
+            loss_dict['rec_velocity_loss'] = rec_velocity_loss * self.rec_velocity_ratio
 
-        loss_dict['rec_feats_loss'] = rec_feats_loss * self.rec_feats_ratio
-        loss_dict['rec_joints_loss'] = rec_joints_loss * self.rec_joints_ratio
-        loss_dict['kl_loss'] = kl_loss * self.kl_ratio
+        if self.kl_ratio > 0:
+            mu_ref = torch.zeros_like(dist_m.loc)
+            scale_ref = torch.ones_like(dist_m.scale)
+            dist_ref = torch.distributions.Normal(mu_ref, scale_ref)
+            kl_loss = torch.distributions.kl_divergence(dist_m, dist_ref).mean()
+            loss_dict['kl_loss'] = kl_loss * self.kl_ratio
+
         loss = sum([v for v in loss_dict.values()])
         loss_dict['loss'] = loss
         return loss_dict
