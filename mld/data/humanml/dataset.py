@@ -272,9 +272,6 @@ class Text2MotionDatasetV2(data.Dataset):
         "Z Normalization"
         motion = (motion - self.mean) / self.std
 
-        if m_length < self.max_motion_length:
-            motion = np.concatenate([motion, np.zeros((self.max_motion_length - m_length, motion.shape[1]))], axis=0)
-
         return (
             word_embeddings,
             pos_one_hots,
