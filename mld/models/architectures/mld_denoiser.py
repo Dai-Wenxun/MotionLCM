@@ -16,6 +16,7 @@ class MldDenoiser(nn.Module):
 
     def __init__(self,
                  latent_dim: list = [1, 256],
+                 alpha: int = 1,
                  ff_size: int = 1024,
                  num_layers: int = 6,
                  num_heads: int = 4,
@@ -33,7 +34,10 @@ class MldDenoiser(nn.Module):
 
         super().__init__()
 
-        self.latent_dim = latent_dim[-1]
+        self.latent_dim = latent_dim[-1] * alpha
+        self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if alpha != 1 else nn.Identity()
+        self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if alpha != 1 else nn.Identity()
+
         self.text_encoded_dim = text_encoded_dim
 
         self.arch = arch
@@ -113,6 +117,7 @@ class MldDenoiser(nn.Module):
         # 0. dimension matching
         # [batch_size, latent_dim[0], latent_dim[1]] -> [latent_dim[0], batch_size, latent_dim[1]]
         sample = sample.permute(1, 0, 2)
+        sample = self.latent_pre(sample)
 
         # 1. check if controlnet
         if self.is_controlnet:
@@ -165,6 +170,7 @@ class MldDenoiser(nn.Module):
         else:
             raise TypeError(f"{self.arch} is not supported")
 
+        sample = self.latent_post(sample)
         # 5. [latent_dim[0], batch_size, latent_dim[1]] -> [batch_size, latent_dim[0], latent_dim[1]]
         sample = sample.permute(1, 0, 2)
         return sample
