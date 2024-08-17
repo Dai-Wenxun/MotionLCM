@@ -37,7 +37,6 @@ class MLD(BaseModel):
         self.denoiser = instantiate_from_config(cfg.model.denoiser)
 
         self.scheduler = instantiate_from_config(cfg.model.scheduler)
-        self.noise_scheduler = instantiate_from_config(cfg.model.noise_scheduler)
 
         self._get_t2m_evaluator(cfg)
 
@@ -46,8 +45,8 @@ class MLD(BaseModel):
 
         self.feats2joints = datamodule.feats2joints
 
-        self.alphas = torch.sqrt(self.noise_scheduler.alphas_cumprod)
-        self.sigmas = torch.sqrt(1 - self.noise_scheduler.alphas_cumprod)
+        self.alphas = torch.sqrt(self.scheduler.alphas_cumprod)
+        self.sigmas = torch.sqrt(1 - self.scheduler.alphas_cumprod)
         self.l2_loss = lambda a, b: (a - b) ** 2
 
         self.is_controlnet = cfg.model.is_controlnet
@@ -239,13 +238,13 @@ class MLD(BaseModel):
         # Sample a random timestep for each motion
         timesteps = torch.randint(
             0,
-            self.noise_scheduler.config.num_train_timesteps,
+            self.scheduler.config.num_train_timesteps,
             (bsz,),
             device=latents.device
         )
         timesteps = timesteps.long()
         # Add noise to the latents according to the noise magnitude at each timestep
-        noisy_latents = self.noise_scheduler.add_noise(latents.clone(), noise, timesteps)
+        noisy_latents = self.scheduler.add_noise(latents.clone(), noise, timesteps)
 
         controlnet_residuals = None
         if self.is_controlnet:
