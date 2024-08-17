@@ -124,9 +124,13 @@ class MldVae(nn.Module):
         std = logvar.exp().pow(0.5)
         dist = torch.distributions.Normal(mu, std)
         latent = dist.rsample()
+        # [latent_dim[0], batch_size, latent_dim] -> [batch_size, latent_dim[0], latent_dim[1]]
+        latent = latent.permute(1, 0, 2)
         return latent, dist
 
     def decode(self, z: torch.Tensor, lengths: list[int]) -> torch.Tensor:
+        # [batch_size, latent_dim[0], latent_dim[1]] -> [latent_dim[0], batch_size, latent_dim]
+        z = z.permute(1, 0, 2)
         mask = lengths_to_mask(lengths, z.device)
         bs, nframes = mask.shape
         queries = torch.zeros(nframes, bs, self.latent_dim, device=z.device)

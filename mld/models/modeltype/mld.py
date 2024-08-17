@@ -219,10 +219,6 @@ class MLD(BaseModel):
         if self.is_controlnet:
             hint_mask = hint.sum(-1) != 0
             controlnet_cond = self.traj_encoder(hint, mask=hint_mask)
-            controlnet_cond = controlnet_cond.permute(1, 0, 2)
-
-        # [n_token, batch_size, latent_dim] -> [batch_size, n_token, latent_dim]
-        latents = latents.permute(1, 0, 2)
 
         timestep_cond = None
         if self.denoiser.time_cond_proj_dim is not None:
