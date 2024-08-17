@@ -165,12 +165,12 @@ def main():
     base_model = MLD(cfg, dataset)
     base_model.load_state_dict(state_dict)
 
-    noise_scheduler = base_model.noise_scheduler
-    alpha_schedule = torch.sqrt(noise_scheduler.alphas_cumprod)
-    sigma_schedule = torch.sqrt(1 - noise_scheduler.alphas_cumprod)
+    scheduler = base_model.scheduler
+    alpha_schedule = torch.sqrt(scheduler.alphas_cumprod)
+    sigma_schedule = torch.sqrt(1 - scheduler.alphas_cumprod)
     solver = DDIMSolver(
-        noise_scheduler.alphas_cumprod.numpy(),
-        timesteps=noise_scheduler.config.num_train_timesteps,
+        scheduler.alphas_cumprod.numpy(),
+        timesteps=scheduler.config.num_train_timesteps,
         ddim_timesteps=cfg.TRAIN.num_ddim_timesteps)
 
     base_model.to(device)
