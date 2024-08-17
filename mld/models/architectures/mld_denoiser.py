@@ -3,13 +3,12 @@ from typing import Optional, Union
 import torch
 import torch.nn as nn
 
-from mld.models.architectures.tools.embeddings import (TimestepEmbedding,
-                                                       Timesteps)
-from mld.models.operator.cross_attention import (SkipTransformerEncoder,
-                                                 TransformerDecoder,
-                                                 TransformerDecoderLayer,
-                                                 TransformerEncoder,
-                                                 TransformerEncoderLayer)
+from mld.models.architectures.tools.embeddings import TimestepEmbedding, Timesteps
+from mld.models.operator.attention import (SkipTransformerEncoder,
+                                           TransformerDecoder,
+                                           TransformerDecoderLayer,
+                                           TransformerEncoder,
+                                           TransformerEncoderLayer)
 from mld.models.operator.position_encoding import build_position_encoding
 
 
