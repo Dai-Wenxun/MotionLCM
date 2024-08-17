@@ -208,8 +208,6 @@ class MLD(BaseModel):
 
             latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
 
-        # [batch_size, 1, latent_dim] -> [1, batch_size, latent_dim]
-        latents = latents.permute(1, 0, 2)
         return latents
 
     def _diffusion_process(self, latents: torch.Tensor, encoder_hidden_states: torch.Tensor,
