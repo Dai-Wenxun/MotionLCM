@@ -111,7 +111,7 @@ class MldDenoiser(nn.Module):
                 ) -> Union[torch.Tensor, list[torch.Tensor]]:
 
         # 0. dimension matching
-        # sample [latent_dim[0], batch_size, latent_dim] <= [batch_size, latent_dim[0], latent_dim[1]]
+        # [batch_size, latent_dim[0], latent_dim[1]] -> [latent_dim[0], batch_size, latent_dim[1]]
         sample = sample.permute(1, 0, 2)
 
         # 1. check if controlnet
@@ -165,7 +165,6 @@ class MldDenoiser(nn.Module):
         else:
             raise TypeError(f"{self.arch} is not supported")
 
-        # 5. [batch_size, latent_dim[0], latent_dim[1]] <= [latent_dim[0], batch_size, latent_dim[1]]
+        # 5. [latent_dim[0], batch_size, latent_dim[1]] -> [batch_size, latent_dim[0], latent_dim[1]]
         sample = sample.permute(1, 0, 2)
-
         return sample
