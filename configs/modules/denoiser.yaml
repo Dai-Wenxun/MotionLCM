@@ -1,6 +1,7 @@
 denoiser:
   target: mld.models.architectures.mld_denoiser.MldDenoiser
   params:
+    alpha: 1
     text_encoded_dim: 768
     ff_size: 1024
     num_layers: 9
