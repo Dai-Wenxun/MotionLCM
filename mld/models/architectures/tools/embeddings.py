@@ -41,11 +41,10 @@ def get_timestep_embedding(
 
 
 class TimestepEmbedding(nn.Module):
-    def __init__(self, channel: int, time_embed_dim: int,
-                 act_fn: str = "silu", cond_proj_dim: Optional[int] = None) -> None:
+    def __init__(self, channel: int, time_embed_dim: int, cond_proj_dim: Optional[int] = None) -> None:
         super().__init__()
 
-        # distill CFG
+        # Distill CFG
         if cond_proj_dim is not None:
             self.cond_proj = nn.Linear(cond_proj_dim, channel, bias=False)
             self.cond_proj.weight.data.fill_(0.0)
@@ -53,9 +52,7 @@ class TimestepEmbedding(nn.Module):
             self.cond_proj = None
 
         self.linear_1 = nn.Linear(channel, time_embed_dim)
-        self.act = None
-        if act_fn == "silu":
-            self.act = nn.SiLU()
+        self.act = nn.SiLU()
         self.linear_2 = nn.Linear(time_embed_dim, time_embed_dim)
 
     def forward(self, sample: torch.Tensor, timestep_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -63,10 +60,7 @@ class TimestepEmbedding(nn.Module):
             sample = sample + self.cond_proj(timestep_cond)
 
         sample = self.linear_1(sample)
-
-        if self.act is not None:
-            sample = self.act(sample)
-
+        sample = self.act(sample)
         sample = self.linear_2(sample)
         return sample
 
@@ -84,6 +78,5 @@ class Timesteps(nn.Module):
             timesteps,
             self.num_channels,
             flip_sin_to_cos=self.flip_sin_to_cos,
-            downscale_freq_shift=self.downscale_freq_shift,
-        )
+            downscale_freq_shift=self.downscale_freq_shift)
         return t_emb
