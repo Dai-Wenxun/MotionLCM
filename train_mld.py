@@ -31,6 +31,8 @@ def main():
     output_dir = osp.join(cfg.FOLDER, name_time_str)
     os.makedirs(output_dir, exist_ok=False)
     os.makedirs(f"{output_dir}/checkpoints", exist_ok=False)
+    if cfg.TRAIN.model_ema:
+        os.makedirs(f"{output_dir}/checkpoints_ema", exist_ok=False)
 
     if cfg.vis == "tb":
         writer = SummaryWriter(output_dir)
@@ -98,6 +100,15 @@ def main():
         num_warmup_steps=cfg.TRAIN.lr_warmup_steps,
         num_training_steps=cfg.TRAIN.max_train_steps)
 
+    # EMA
+    model_ema = None
+    if cfg.TRAIN.model_ema:
+        adjust = cfg.TRAIN.BATCH_SIZE / cfg.TRAIN.max_train_epochs * cfg.TRAIN.model_ema_steps
+        alpha = 1.0 - cfg.TRAIN.model_ema_decay
+        alpha = min(1.0, alpha * adjust)
+        logger.info(f'EMA alpha: {alpha}')
+        model_ema = torch.optim.swa_utils.AveragedModel(model, device, lambda p0, p1, _: (1 - alpha) * p0 + alpha * p1)
+
     # Train!
     logger.info("***** Running training *****")
     logging.info(f"  Num examples = {len(train_dataloader.dataset)}")
@@ -108,27 +119,30 @@ def main():
     global_step = 0
 
     @torch.no_grad()
-    def validation():
-        model.denoiser.eval()
+    def validation(target_model: MLD, ema: bool = False) -> tuple:
+        target_model.denoiser.eval()
         val_loss_list = []
         for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
-            val_loss_dict = model.allsplit_step(split='val', batch=val_batch)
+            val_loss_dict = target_model.allsplit_step(split='val', batch=val_batch)
             val_loss_list.append(val_loss_dict)
-        metrics = model.allsplit_epoch_end()
+        metrics = target_model.allsplit_epoch_end()
         metrics[f"Val/loss"] = sum([d['loss'] for d in val_loss_list]).item() / len(val_dataloader)
         max_val_rp1 = metrics['Metrics/R_precision_top_1']
         min_val_fid = metrics['Metrics/FID']
         print_table(f'Validation@Step-{global_step}', metrics)
         for mk, mv in metrics.items():
+            mk = mk + '_EMA' if ema else mk
             if cfg.vis == "tb":
                 writer.add_scalar(mk, mv, global_step=global_step)
             elif cfg.vis == "swanlab":
                 writer.log({mk: mv}, step=global_step)
-        model.denoiser.train()
+        target_model.denoiser.train()
         return max_val_rp1, min_val_fid
 
-    max_rp1, min_fid = validation()
+    max_rp1, min_fid = validation(model)
+    if cfg.TRAIN.model_ema:
+        validation(model_ema.module, ema=True)
 
     progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
     while True:
@@ -146,6 +160,9 @@ def main():
             progress_bar.update(1)
             global_step += 1
 
+            if model_ema and global_step % cfg.TRAIN.model_ema_steps == 0:
+                model_ema.update_parameters(model)
+
             if global_step % cfg.TRAIN.checkpointing_steps == 0:
                 save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-{global_step}.ckpt")
                 ckpt = dict(state_dict=model.state_dict())
@@ -153,8 +170,18 @@ def main():
                 torch.save(ckpt, save_path)
                 logger.info(f"Saved state to {save_path}")
 
+                if cfg.TRAIN.model_ema:
+                    save_path = os.path.join(output_dir, 'checkpoints_ema', f"checkpoint-{global_step}.ckpt")
+                    ckpt = dict(state_dict=model_ema.module.state_dict())
+                    model_ema.module.on_save_checkpoint(ckpt)
+                    torch.save(ckpt, save_path)
+                    logger.info(f"Saved EMA state to {save_path}")
+
             if global_step % cfg.TRAIN.validation_steps == 0:
-                cur_rp1, cur_fid = validation()
+                cur_rp1, cur_fid = validation(model)
+                if cfg.TRAIN.model_ema:
+                    validation(model_ema.module, ema=True)
+
                 if cur_rp1 > max_rp1:
                     max_rp1 = cur_rp1
                     save_path = os.path.join(output_dir, 'checkpoints',
@@ -186,6 +213,13 @@ def main():
                 ckpt = dict(state_dict=model.state_dict())
                 model.on_save_checkpoint(ckpt)
                 torch.save(ckpt, save_path)
+
+                if cfg.TRAIN.model_ema:
+                    save_path = os.path.join(output_dir, 'checkpoints_ema', f"checkpoint-last.ckpt")
+                    ckpt = dict(state_dict=model_ema.module.state_dict())
+                    model_ema.module.on_save_checkpoint(ckpt)
+                    torch.save(ckpt, save_path)
+
                 exit(0)
 
 

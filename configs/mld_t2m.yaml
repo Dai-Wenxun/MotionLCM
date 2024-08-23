@@ -26,6 +26,9 @@ TRAIN:
   adam_weight_decay: 0.0
   adam_epsilon: 1e-08
   max_grad_norm: 1.0
+  model_ema: true
+  model_ema_steps: 32
+  model_ema_decay: 0.9999
 
 VAL:
   DATASET: 'humanml3d'
