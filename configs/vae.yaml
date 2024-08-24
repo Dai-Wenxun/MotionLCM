@@ -72,9 +72,9 @@ model:
   rec_velocity_ratio: 0.5
   kl_ratio: 1e-4
 
-  rec_feats_loss: 'smooth_l1'
-  rec_joints_loss: 'smooth_l1'
-  rec_velocity_loss: 'smooth_l1'
+  rec_feats_loss: 'l1_smooth'
+  rec_joints_loss: 'l1_smooth'
+  rec_velocity_loss: 'l1_smooth'
   mask_loss: true
 
   t2m_textencoder:

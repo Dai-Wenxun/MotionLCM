@@ -61,8 +61,8 @@ class VAE(BaseModel):
         logger.info(f'VAE Decoder: {count_parameters(self.vae.decoder)}M')
 
     def loss_calculate(self, a: torch.Tensor, b: torch.Tensor, loss_type: str,
-                       lengths: Optional[list[int]] = None) -> torch.Tensor:
-        mask = None if not self.mask_loss else lengths_to_mask(lengths, a.device)
+                       mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        mask = None if not self.mask_loss else mask
         if loss_type == 'l1':
             loss = F.l1_loss(a, b, reduction='none')
         elif loss_type == 'l1_smooth':
@@ -80,8 +80,10 @@ class VAE(BaseModel):
         lengths = batch["length"]
         feats_ref = batch['motion']
 
-        z, dist_m = self.vae.encode(feats_ref, lengths)
-        feats_rst = self.vae.decode(z, lengths)
+        padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+        mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
+        z, dist_m = self.vae.encode(feats_ref, mask)
+        feats_rst = self.vae.decode(z, mask)
 
         loss_dict = dict(
             rec_feats_loss=torch.tensor(0., device=z.device),
@@ -90,19 +92,19 @@ class VAE(BaseModel):
             kl_loss=torch.tensor(0., device=z.device))
 
         if self.rec_feats_ratio > 0:
-            rec_feats_loss = self.loss_calculate(feats_ref, feats_rst, self.rec_feats_loss, lengths)
+            rec_feats_loss = self.loss_calculate(feats_ref, feats_rst, self.rec_feats_loss, mask)
             loss_dict['rec_feats_loss'] = rec_feats_loss * self.rec_feats_ratio
 
         if self.rec_joints_ratio > 0:
             joints_rst = self.feats2joints(feats_rst)
             joints_ref = self.feats2joints(feats_ref)
-            rec_joints_loss = self.loss_calculate(joints_ref, joints_rst, self.rec_joints_loss, lengths)
+            rec_joints_loss = self.loss_calculate(joints_ref, joints_rst, self.rec_joints_loss, mask)
             loss_dict['rec_joints_loss'] = rec_joints_loss * self.rec_joints_ratio
 
         if self.rec_velocity_ratio > 0:
             rec_velocity_loss = self.loss_calculate(feats_ref[..., 4: (self.njoints - 1) * 3 + 4],
                                                     feats_rst[..., 4: (self.njoints - 1) * 3 + 4],
-                                                    self.rec_velocity_loss, lengths)
+                                                    self.rec_velocity_loss, mask)
             loss_dict['rec_velocity_loss'] = rec_velocity_loss * self.rec_velocity_ratio
 
         if self.kl_ratio > 0:
@@ -126,12 +128,14 @@ class VAE(BaseModel):
         start = time.time()
 
         vae_st_e = time.time()
-        z, dist_m = self.vae.encode(feats_ref, lengths)
+        padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+        mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
+        z, dist_m = self.vae.encode(feats_ref, mask)
         vae_et_e = time.time()
         self.vae_encode_times.append(vae_et_e - vae_st_e)
 
         vae_st_d = time.time()
-        feats_rst = self.vae.decode(z, lengths)
+        feats_rst = self.vae.decode(z, mask)
         vae_et_d = time.time()
         self.vae_decode_times.append(vae_et_d - vae_st_d)
 
