@@ -56,6 +56,7 @@ DATASET:
     MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
+  PADDING_TO_MAX: true
 
 METRIC:
   DIST_SYNC_ON_STEP: true
@@ -68,8 +69,13 @@ model:
   # VAE Args
   rec_feats_ratio: 1.0
   rec_joints_ratio: 0.0
-  rec_velocity_ratio: 0.0
-  kl_ratio: 0.0
+  rec_velocity_ratio: 0.5
+  kl_ratio: 1e-4
+
+  rec_feats_loss: 'smooth_l1'
+  rec_joints_loss: 'smooth_l1'
+  rec_velocity_loss: 'smooth_l1'
+  mask_loss: true
 
   t2m_textencoder:
     dim_word: 300

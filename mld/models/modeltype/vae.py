@@ -10,6 +10,7 @@ import torch.nn.functional as F
 
 from mld.data.base import BaseDataModule
 from mld.config import instantiate_from_config
+from mld.utils.temos_utils import lengths_to_mask
 from mld.utils.utils import count_parameters, get_guidance_scale_embedding, extract_into_tensor, sum_flat
 from .base import BaseModel
 
@@ -38,17 +39,42 @@ class VAE(BaseModel):
         self.rec_velocity_ratio = cfg.model.rec_velocity_ratio
         self.kl_ratio = cfg.model.kl_ratio
 
+        self.rec_feats_loss = cfg.model.rec_feats_loss
+        self.rec_joints_loss = cfg.model.rec_joints_loss
+        self.rec_velocity_loss = cfg.model.rec_velocity_loss
+        self.mask_loss = cfg.model.mask_loss
+
         logger.info(f"latent_dim: {cfg.model.latent_dim}")
         logger.info(f"rec_feats_ratio: {self.rec_feats_ratio}, "
                     f"rec_joints_ratio: {self.rec_joints_ratio}, "
                     f"rec_velocity_ratio: {self.rec_velocity_ratio}, "
                     f"kl_ratio: {self.kl_ratio}")
+        logger.info(f"rec_feats_loss: {self.rec_feats_loss}, "
+                    f"rec_joints_loss: {self.rec_joints_loss}, "
+                    f"rec_velocity_loss: {self.rec_velocity_loss}")
+        logger.info(f"mask_loss: {cfg.model.mask_loss}")
 
         self.summarize_parameters()
 
     def summarize_parameters(self) -> None:
         logger.info(f'VAE Encoder: {count_parameters(self.vae.encoder)}M')
         logger.info(f'VAE Decoder: {count_parameters(self.vae.decoder)}M')
+
+    def loss_calculate(self, a: torch.Tensor, b: torch.Tensor, loss_type: str,
+                       lengths: Optional[list[int]] = None) -> torch.Tensor:
+        mask = None if not self.mask_loss else lengths_to_mask(lengths, a.device)
+        if loss_type == 'l1':
+            loss = F.l1_loss(a, b, reduction='none')
+        elif loss_type == 'l1_smooth':
+            loss = F.smooth_l1_loss(a, b, reduction='none')
+        elif loss_type == 'l2':
+            loss = F.mse_loss(a, b, reduction='none')
+        else:
+            raise ValueError(f'Unknown loss type: {loss_type}')
+
+        if mask is not None:
+            loss = (loss.mean(dim=-1) * mask).sum(-1) / mask.sum(-1)
+        return loss.mean()
 
     def train_vae_forward(self, batch: dict) -> dict:
         lengths = batch["length"]
@@ -64,18 +90,19 @@ class VAE(BaseModel):
             kl_loss=torch.tensor(0., device=z.device))
 
         if self.rec_feats_ratio > 0:
-            rec_feats_loss = F.smooth_l1_loss(feats_ref, feats_rst)
+            rec_feats_loss = self.loss_calculate(feats_ref, feats_rst, self.rec_feats_loss, lengths)
             loss_dict['rec_feats_loss'] = rec_feats_loss * self.rec_feats_ratio
 
         if self.rec_joints_ratio > 0:
             joints_rst = self.feats2joints(feats_rst)
             joints_ref = self.feats2joints(feats_ref)
-            rec_joints_loss = F.smooth_l1_loss(joints_ref, joints_rst)
+            rec_joints_loss = self.loss_calculate(joints_ref, joints_rst, self.rec_joints_loss, lengths)
             loss_dict['rec_joints_loss'] = rec_joints_loss * self.rec_joints_ratio
 
         if self.rec_velocity_ratio > 0:
-            rec_velocity_loss = F.smooth_l1_loss(feats_ref[..., 4: (self.njoints - 1) * 3 + 4],
-                                                 feats_rst[..., 4: (self.njoints - 1) * 3 + 4])
+            rec_velocity_loss = self.loss_calculate(feats_ref[..., 4: (self.njoints - 1) * 3 + 4],
+                                                    feats_rst[..., 4: (self.njoints - 1) * 3 + 4],
+                                                    self.rec_velocity_loss, lengths)
             loss_dict['rec_velocity_loss'] = rec_velocity_loss * self.rec_velocity_ratio
 
         if self.kl_ratio > 0:

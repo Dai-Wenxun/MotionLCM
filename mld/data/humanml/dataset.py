@@ -30,6 +30,7 @@ class Text2MotionDatasetV2(data.Dataset):
         motion_dir: str,
         text_dir: str,
         fps: int,
+        padding_to_max: bool,
         tiny: bool = False,
         progress_bar: bool = True,
         **kwargs,
@@ -39,6 +40,7 @@ class Text2MotionDatasetV2(data.Dataset):
         self.min_motion_length = min_motion_length
         self.max_text_len = max_text_len
         self.unit_length = unit_length
+        self.padding_to_max = padding_to_max
 
         data_dict = {}
         id_list = []
@@ -268,9 +270,18 @@ class Text2MotionDatasetV2(data.Dataset):
                 hint = self.random_mask(joints, n_joints)
 
             hint = hint.reshape(hint.shape[0], -1)
+            if self.padding_to_max and m_length < self.max_motion_length:
+                hint = np.concatenate([hint,
+                                       np.zeros((self.max_motion_length - m_length, hint.shape[1]))
+                                       ], axis=0)
 
         "Z Normalization"
         motion = (motion - self.mean) / self.std
+
+        if self.padding_to_max and m_length < self.max_motion_length:
+            motion = np.concatenate([motion,
+                                     np.zeros((self.max_motion_length - m_length, motion.shape[1]))
+                                     ], axis=0)
 
         return (
             word_embeddings,

@@ -79,6 +79,7 @@ def get_dataset(cfg: DictConfig, phase: str = "train") -> BaseDataModule:
             max_text_len=cfg.DATASET.SAMPLER.MAX_TEXT_LEN,
             unit_length=eval(f"cfg.DATASET.{dataset_name.upper()}.UNIT_LEN"),
             fps=eval(f"cfg.DATASET.{dataset_name.upper()}.FRAME_RATE"),
+            padding_to_max=cfg.DATASET.PADDING_TO_MAX,
             model_kwargs=cfg.model)
 
     elif dataset_name.lower() in ["humanact12", 'uestc', "amass"]:
