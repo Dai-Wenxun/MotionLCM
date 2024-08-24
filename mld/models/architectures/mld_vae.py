@@ -86,15 +86,8 @@ class MldVae(nn.Module):
         feats_rst = self.decode(z, lengths)
         return feats_rst, z, dist
 
-    def encode(self, features: torch.Tensor,
-               lengths: Optional[list[int]] = None) -> tuple[torch.Tensor, Distribution]:
-        if lengths is None:
-            lengths = [len(feature) for feature in features]
-
-        device = features.device
-
+    def encode(self, features: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, Distribution]:
         bs, nframes, nfeats = features.shape
-        mask = lengths_to_mask(lengths, device)
 
         x = features
         # Embed each human poses into latent vectors
@@ -128,10 +121,9 @@ class MldVae(nn.Module):
         latent = latent.permute(1, 0, 2)
         return latent, dist
 
-    def decode(self, z: torch.Tensor, lengths: list[int]) -> torch.Tensor:
+    def decode(self, z: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # [batch_size, latent_dim[0], latent_dim[1]] -> [latent_dim[0], batch_size, latent_dim]
         z = z.permute(1, 0, 2)
-        mask = lengths_to_mask(lengths, z.device)
         bs, nframes = mask.shape
         queries = torch.zeros(nframes, bs, self.latent_dim, device=z.device)
 
