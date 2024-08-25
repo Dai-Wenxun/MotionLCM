@@ -15,6 +15,65 @@ from .utils.word_vectorizer import WordVectorizer
 logger = logging.getLogger(__name__)
 
 
+class MotionDataset(data.Dataset):
+    def __init__(self, mean: np.ndarray, std: np.ndarray,
+                 split_file: str, motion_dir: str, window_size: int,
+                 tiny: bool = False, progress_bar: bool = True, **kwargs) -> None:
+        self.data = []
+        self.lengths = []
+        id_list = []
+        with cs.open(split_file, "r") as f:
+            for line in f.readlines():
+                id_list.append(line.strip())
+
+        maxdata = 10 if tiny else 1e10
+        if progress_bar:
+            enumerator = enumerate(
+                track(
+                    id_list,
+                    f"Loading HumanML3D {split_file.split('/')[-1].split('.')[0]}",
+                ))
+        else:
+            enumerator = enumerate(id_list)
+
+        count = 0
+        for name in track(enumerator):
+            if count > maxdata:
+                break
+            try:
+                motion = np.load(pjoin(motion_dir, name + '.npy'))
+                if motion.shape[0] < window_size:
+                    continue
+                self.lengths.append(motion.shape[0] - window_size)
+                self.data.append(motion)
+            except Exception as e:
+                print(e)
+                pass
+
+        self.cumsum = np.cumsum([0] + self.lengths)
+        if not tiny:
+            logger.info("Total number of motions {}, snippets {}".format(len(self.data), self.cumsum[-1]))
+
+        self.mean = mean
+        self.std = std
+        self.window_size = window_size
+
+    def __len__(self) -> int:
+        return self.cumsum[-1]
+
+    def __getitem__(self, item: int) -> tuple:
+        if item != 0:
+            motion_id = np.searchsorted(self.cumsum, item) - 1
+            idx = item - self.cumsum[motion_id] - 1
+        else:
+            motion_id = 0
+            idx = 0
+        motion = self.data[motion_id][idx:idx + self.window_size]
+        "Z Normalization"
+        motion = (motion - self.mean) / self.std
+        return motion, self.window_size
+
+
 class Text2MotionDatasetV2(data.Dataset):
 
     def __init__(
@@ -50,7 +109,6 @@ class Text2MotionDatasetV2(data.Dataset):
         self.id_list = id_list
 
         maxdata = 10 if tiny else 1e10
-
         if progress_bar:
             enumerator = enumerate(
                 track(
@@ -118,7 +176,8 @@ class Text2MotionDatasetV2(data.Dataset):
                     new_name_list.append(name)
                     length_list.append(len(motion))
                     count += 1
-            except:
+            except Exception as e:
+                print(e)
                 pass
 
         name_list, length_list = zip(
@@ -153,7 +212,6 @@ class Text2MotionDatasetV2(data.Dataset):
             self.testing_density = model_params.testing_density
 
         self.data_dict = data_dict
-        self.nfeats = data_dict[name_list[0]]["motion"].shape[1]
         self.name_list = name_list
 
     def __len__(self) -> int:

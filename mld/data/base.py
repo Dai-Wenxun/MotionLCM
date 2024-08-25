@@ -4,8 +4,6 @@ from typing import Any, Callable
 
 from torch.utils.data import DataLoader
 
-from .humanml.dataset import Text2MotionDatasetV2
-
 
 class BaseDataModule:
     def __init__(self, collate_fn: Callable, batch_size: int,
@@ -19,7 +17,7 @@ class BaseDataModule:
         }
         self.is_mm = False
 
-    def get_sample_set(self, overrides: dict) -> Text2MotionDatasetV2:
+    def get_sample_set(self, overrides: dict) -> Any:
         sample_params = copy.deepcopy(self.hparams)
         sample_params.update(overrides)
         split_file = pjoin(
@@ -33,7 +31,6 @@ class BaseDataModule:
             subset = item[:-len("_dataset")].upper()
             item_c = "_" + item
             if item_c not in self.__dict__:
-                split = eval(f"self.cfg.{subset}.SPLIT")
                 split_file = pjoin(
                     eval(f"self.cfg.DATASET.{self.name.upper()}.ROOT"),
                     eval(f"self.cfg.{subset}.SPLIT") + ".txt"

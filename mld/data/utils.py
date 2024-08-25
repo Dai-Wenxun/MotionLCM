@@ -36,3 +36,11 @@ def mld_collate(batch: list) -> dict:
         adapted_batch['hint'] = collate_tensors([torch.tensor(b[-1]).float() for b in notnone_batches])
 
     return adapted_batch
+
+
+def mld_collate_motion_only(batch: list) -> dict:
+    batch = {
+        "motion": collate_tensors([torch.tensor(b[0]).float() for b in batch]),
+        "length": [b[1] for b in batch]
+    }
+    return batch
