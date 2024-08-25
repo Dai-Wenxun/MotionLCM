@@ -28,12 +28,12 @@ TRAIN:
   max_grad_norm: 1.0
 
 VAL:
-  BATCH_SIZE: 32
-  SPLIT: 'test'
+  BATCH_SIZE: 256
+  SPLIT: 'val'
   NUM_WORKERS: 12
 
 TEST:
-  BATCH_SIZE: 1
+  BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 

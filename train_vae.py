@@ -57,9 +57,9 @@ def main():
 
     dataset = get_dataset(cfg, motion_only=cfg.TRAIN.get('MOTION_ONLY', False))
     train_dataloader = dataset.train_dataloader()
-    val_dataloader_loss = dataset.val_dataloader()
+    val_dataloader = dataset.val_dataloader()
     dataset = get_dataset(cfg, motion_only=False)
-    val_dataloader_metric = dataset.val_dataloader()
+    test_dataloader = dataset.test_dataloader()
 
     model = VAE(cfg, dataset)
     model.to(device)
@@ -109,19 +109,18 @@ def main():
         model.vae.eval()
 
         val_loss_list = []
-        for val_batch in tqdm(val_dataloader_loss):
+        for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
             val_loss_dict = model.allsplit_step(split='val', batch=val_batch)
             val_loss_list.append(val_loss_dict)
 
-        for val_batch in tqdm(val_dataloader_metric):
+        for val_batch in tqdm(test_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
             model.allsplit_step(split='test', batch=val_batch)
         metrics = model.allsplit_epoch_end()
 
         for loss_k in val_loss_list[0].keys():
-            metrics[f"Val/{loss_k}"] = sum([d[loss_k] for d in val_loss_list]).item() \
-                                       / len(val_dataloader_loss)
+            metrics[f"Val/{loss_k}"] = sum([d[loss_k] for d in val_loss_list]).item() / len(val_dataloader)
 
         max_val_mpjpe = metrics['Metrics/MPJPE']
         min_val_fid = metrics['Metrics/FID']

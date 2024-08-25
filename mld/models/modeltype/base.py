@@ -40,7 +40,7 @@ class BaseModel(nn.Module):
             output_size=cfg.model.t2m_textencoder.dim_coemb_hidden)
 
         # load pretrained
-        dataname = cfg.TEST.DATASET
+        dataname = cfg.DATASET.NAME
         dataname = "t2m" if dataname == "humanml3d" else dataname
         t2m_checkpoint = torch.load(
             os.path.join(cfg.model.t2m_path, dataname, "text_mot_match/model/finest.tar"), map_location='cpu')
