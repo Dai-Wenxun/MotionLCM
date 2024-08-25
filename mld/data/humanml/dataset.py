@@ -37,7 +37,7 @@ class MotionDataset(data.Dataset):
             enumerator = enumerate(id_list)
 
         count = 0
-        for name in track(enumerator):
+        for i, name in enumerator:
             if count > maxdata:
                 break
             try:
