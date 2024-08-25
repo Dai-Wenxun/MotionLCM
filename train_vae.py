@@ -55,9 +55,11 @@ def main():
     transformers.utils.logging.set_verbosity_warning()
     diffusers.utils.logging.set_verbosity_info()
 
-    dataset = get_dataset(cfg)
+    dataset = get_dataset(cfg, motion_only=cfg.TRAIN.get('MOTION_ONLY', False))
     train_dataloader = dataset.train_dataloader()
-    val_dataloader = dataset.val_dataloader()
+    val_dataloader_loss = dataset.val_dataloader()
+    dataset = get_dataset(cfg, motion_only=False)
+    val_dataloader_metric = dataset.val_dataloader()
 
     model = VAE(cfg, dataset)
     model.to(device)
@@ -105,14 +107,22 @@ def main():
     @torch.no_grad()
     def validation():
         model.vae.eval()
+
         val_loss_list = []
-        for val_batch in tqdm(val_dataloader):
+        for val_batch in tqdm(val_dataloader_loss):
             val_batch = move_batch_to_device(val_batch, device)
             val_loss_dict = model.allsplit_step(split='val', batch=val_batch)
             val_loss_list.append(val_loss_dict)
+
+        for val_batch in tqdm(val_dataloader_metric):
+            val_batch = move_batch_to_device(val_batch, device)
+            model.allsplit_step(split='test', batch=val_batch)
         metrics = model.allsplit_epoch_end()
+
         for loss_k in val_loss_list[0].keys():
-            metrics[f"Val/{loss_k}"] = sum([d[loss_k] for d in val_loss_list]).item() / len(val_dataloader)
+            metrics[f"Val/{loss_k}"] = sum([d[loss_k] for d in val_loss_list]).item() \
+                                       / len(val_dataloader_loss)
+
         max_val_mpjpe = metrics['Metrics/MPJPE']
         min_val_fid = metrics['Metrics/FID']
         print_table(f'Validation@Step-{global_step}', metrics)

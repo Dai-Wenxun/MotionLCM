@@ -3,7 +3,7 @@ motion_vae:
   params:
     nfeats: ${DATASET.NFEATS}
     latent_dim: ${model.latent_dim}
-    down_t: 2
+    down_t: 5
     stride_t: 2
     n_depth: 3
     dilation_growth_rate: 3

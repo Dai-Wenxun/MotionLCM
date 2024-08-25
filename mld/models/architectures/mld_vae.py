@@ -2,6 +2,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions.distribution import Distribution
 
 from mld.models.operator.attention import (
@@ -163,6 +164,9 @@ class MldVaeV2(nn.Module):
                  norm_groups: int = 32,
                  norm_eps: float = 1e-6) -> None:
         super(MldVaeV2, self).__init__()
+        self.down_t = down_t
+        self.stride_t = stride_t
+
         self.encoder = ResEncoder(nfeats, latent_dim, latent_dim, down_t, stride_t,
                                   n_depth, dilation_growth_rate, activation=activation,
                                   dropout=dropout, norm=norm, norm_groups=norm_groups,
@@ -174,7 +178,14 @@ class MldVaeV2(nn.Module):
         self.quant_conv = nn.Conv1d(latent_dim * 2, latent_dim * 2, 1)
         self.post_quant_conv = nn.Conv1d(latent_dim, latent_dim, 1)
 
+        self.T = None
+
     def encode(self, features: torch.Tensor, *args, **kwargs) -> tuple[torch.Tensor, Distribution]:
+        self.T = features.shape[1]
+        padding_factor = self.stride_t ** self.down_t
+        padding = (padding_factor - self.T % padding_factor) % padding_factor
+        features = F.pad(features, (0, 0, 0, padding))
+
         h = self.encoder(features)
         moments = self.quant_conv(h)
         mu, logvar = torch.chunk(moments, 2, dim=1)
@@ -186,4 +197,5 @@ class MldVaeV2(nn.Module):
     def decode(self, z: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         z = self.post_quant_conv(z)
         feats = self.decoder(z)
+        feats = feats[:, :self.T, :]
         return feats

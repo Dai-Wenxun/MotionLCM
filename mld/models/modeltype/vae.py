@@ -181,7 +181,7 @@ class VAE(BaseModel):
         return rs_set
 
     def allsplit_step(self, split: str, batch: dict) -> Optional[dict]:
-        if split in ["test", "val"]:
+        if split in ["test"]:
             rs_set = self.t2m_eval(batch)
 
             for metric in self.metric_list:

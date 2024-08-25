@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 import torch
 
 from .base import BaseDataModule
-from .humanml.dataset import Text2MotionDatasetV2
+from .humanml.dataset import Text2MotionDatasetV2, MotionDataset
 from .humanml.scripts.motion_process import recover_from_ric
 
 
@@ -15,11 +15,11 @@ class HumanML3DDataModule(BaseDataModule):
 
     def __init__(self,
                  cfg: DictConfig,
+                 motion_only: bool,
                  batch_size: int,
                  num_workers: int,
                  collate_fn: Optional[Callable] = None,
                  persistent_workers: bool = True,
-                 phase: str = "train",
                  **kwargs) -> None:
         super().__init__(batch_size=batch_size,
                          num_workers=num_workers,
@@ -28,15 +28,11 @@ class HumanML3DDataModule(BaseDataModule):
         self.hparams = copy.deepcopy(kwargs)
         self.name = "humanml3d"
         self.njoints = 22
-        if phase == "text_only":
-            raise NotImplementedError
-        else:
-            self.Dataset = Text2MotionDatasetV2
+        self.nfeats = 263
         self.cfg = cfg
-
+        self.Dataset = MotionDataset if motion_only else Text2MotionDatasetV2
         sample_overrides = {"tiny": True, "progress_bar": False}
         self._sample_set = self.get_sample_set(overrides=sample_overrides)
-        self.nfeats = self._sample_set.nfeats
 
     def denorm_spatial(self, hint: torch.Tensor) -> torch.Tensor:
         raw_mean = torch.tensor(self._sample_set.raw_mean).to(hint)

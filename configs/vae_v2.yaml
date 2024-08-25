@@ -4,8 +4,8 @@ TEST_FOLDER: './experiments_recons_test'
 NAME: 'vae_v2_humanml'
 
 TRAIN:
-  DATASET: 'humanml3d'
-  BATCH_SIZE: 128
+  MOTION_ONLY: true
+  BATCH_SIZE: 256
   SPLIT: 'train'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
@@ -28,13 +28,11 @@ TRAIN:
   max_grad_norm: 1.0
 
 VAL:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
 TEST:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 1
   SPLIT: 'test'
   NUM_WORKERS: 12
@@ -46,6 +44,7 @@ TEST:
   DIVERSITY_TIMES: 300
 
 DATASET:
+  NAME: 'humanml3d'
   SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
@@ -56,6 +55,8 @@ DATASET:
     MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
+  PADDING_TO_MAX: true
+  WINDOW_SIZE: 64
 
 METRIC:
   DIST_SYNC_ON_STEP: true
@@ -68,8 +69,13 @@ model:
   # VAE Args
   rec_feats_ratio: 1.0
   rec_joints_ratio: 0.0
-  rec_velocity_ratio: 0.0
-  kl_ratio: 0.0
+  rec_velocity_ratio: 0.5
+  kl_ratio: 1e-4
+
+  rec_feats_loss: 'l1_smooth'
+  rec_joints_loss: 'l1_smooth'
+  rec_velocity_loss: 'l1_smooth'
+  mask_loss: true
 
   t2m_textencoder:
     dim_word: 300
