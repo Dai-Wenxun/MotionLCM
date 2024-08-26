@@ -162,10 +162,12 @@ class MldVaeV2(nn.Module):
                  dropout: float = 0.2,
                  norm: Optional[str] = None,
                  norm_groups: int = 32,
-                 norm_eps: float = 1e-6) -> None:
+                 norm_eps: float = 1e-6,
+                 clip_range: Optional[tuple[int]] = None) -> None:
         super(MldVaeV2, self).__init__()
         self.down_t = down_t
         self.stride_t = stride_t
+        self.clip_range = clip_range
 
         self.encoder = ResEncoder(nfeats, latent_dim, latent_dim, down_t, stride_t,
                                   n_depth, dilation_growth_rate, activation=activation,
@@ -189,6 +191,8 @@ class MldVaeV2(nn.Module):
         h = self.encoder(features)
         moments = self.quant_conv(h)
         mu, logvar = torch.chunk(moments, 2, dim=1)
+        if self.clip_range is not None:
+            logvar = torch.clamp(logvar, self.clip_range[0], self.clip_range[1])
         std = torch.exp(0.5 * logvar)
         dist = torch.distributions.Normal(mu, std)
         latent = dist.rsample()

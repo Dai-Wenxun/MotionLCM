@@ -12,3 +12,4 @@ motion_vae:
     norm: None
     norm_groups: 32
     norm_eps: 1e-6
+    clip_range: [-30.0, 20]

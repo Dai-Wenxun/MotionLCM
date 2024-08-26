@@ -17,8 +17,8 @@ class ResConv1DBlock(nn.Module):
             self.norm1 = nn.GroupNorm(num_groups=norm_groups, num_channels=n_in, eps=norm_eps)
             self.norm2 = nn.GroupNorm(num_groups=norm_groups, num_channels=n_in, eps=norm_eps)
         elif norm == "BN":
-            self.norm1 = nn.BatchNorm1d(num_features=n_in)
-            self.norm2 = nn.BatchNorm1d(num_features=n_in)
+            self.norm1 = nn.BatchNorm1d(num_features=n_in, eps=norm_eps)
+            self.norm2 = nn.BatchNorm1d(num_features=n_in, eps=norm_eps)
         else:
             self.norm1 = nn.Identity()
             self.norm2 = nn.Identity()
