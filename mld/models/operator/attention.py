@@ -18,10 +18,10 @@ class SkipTransformerEncoder(nn.Module):
         assert num_layers % 2 == 1
 
         num_block = (num_layers - 1) // 2
-        self.input_blocks = _get_clones(encoder_layer, num_block)
-        self.middle_block = _get_clone(encoder_layer)
-        self.output_blocks = _get_clones(encoder_layer, num_block)
-        self.linear_blocks = _get_clones(nn.Linear(2 * self.d_model, self.d_model), num_block)
+        self.input_blocks = get_clones(encoder_layer, num_block)
+        self.middle_block = get_clone(encoder_layer)
+        self.output_blocks = get_clones(encoder_layer, num_block)
+        self.linear_blocks = get_clones(nn.Linear(2 * self.d_model, self.d_model), num_block)
 
         self._reset_parameters()
 
@@ -92,10 +92,10 @@ class SkipTransformerDecoder(nn.Module):
         assert num_layers % 2 == 1
 
         num_block = (num_layers - 1) // 2
-        self.input_blocks = _get_clones(decoder_layer, num_block)
-        self.middle_block = _get_clone(decoder_layer)
-        self.output_blocks = _get_clones(decoder_layer, num_block)
-        self.linear_blocks = _get_clones(nn.Linear(2 * self.d_model, self.d_model), num_block)
+        self.input_blocks = get_clones(decoder_layer, num_block)
+        self.middle_block = get_clone(decoder_layer)
+        self.output_blocks = get_clones(decoder_layer, num_block)
+        self.linear_blocks = get_clones(nn.Linear(2 * self.d_model, self.d_model), num_block)
 
         self._reset_parameters()
 
@@ -172,7 +172,7 @@ class TransformerEncoder(nn.Module):
     def __init__(self, encoder_layer: nn.Module, num_layers: int,
                  norm: Optional[nn.Module] = None, return_intermediate: bool = False) -> None:
         super().__init__()
-        self.layers = _get_clones(encoder_layer, num_layers)
+        self.layers = get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
         self.norm = norm
         self.return_intermediate = return_intermediate
@@ -208,7 +208,7 @@ class TransformerDecoder(nn.Module):
     def __init__(self, decoder_layer: nn.Module, num_layers: int,
                  norm: Optional[nn.Module] = None, return_intermediate: bool = False) -> None:
         super().__init__()
-        self.layers = _get_clones(decoder_layer, num_layers)
+        self.layers = get_clones(decoder_layer, num_layers)
         self.num_layers = num_layers
         self.norm = norm
         self.return_intermediate = return_intermediate
@@ -262,7 +262,7 @@ class TransformerEncoderLayer(nn.Module):
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
 
-        self.activation = _get_activation_fn(activation)
+        self.activation = get_activation_fn(activation)
         self.normalize_before = normalize_before
 
     def forward_post(self,
@@ -317,7 +317,7 @@ class TransformerDecoderLayer(nn.Module):
         self.dropout2 = nn.Dropout(dropout)
         self.dropout3 = nn.Dropout(dropout)
 
-        self.activation = _get_activation_fn(activation)
+        self.activation = get_activation_fn(activation)
         self.normalize_before = normalize_before
 
     def forward_post(self,
@@ -371,15 +371,15 @@ class TransformerDecoderLayer(nn.Module):
         return self.forward_post(tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
 
 
-def _get_clone(module: nn.Module) -> nn.Module:
+def get_clone(module: nn.Module) -> nn.Module:
     return copy.deepcopy(module)
 
 
-def _get_clones(module: nn.Module, N: int) -> nn.ModuleList:
+def get_clones(module: nn.Module, N: int) -> nn.ModuleList:
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
-def _get_activation_fn(activation: str) -> Callable:
+def get_activation_fn(activation: str) -> Callable:
     """Return an activation function given a string"""
     if activation == "relu":
         return F.relu
