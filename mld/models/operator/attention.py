@@ -241,8 +241,7 @@ class TransformerEncoderLayer(nn.Module):
                      src: torch.Tensor,
                      src_mask: Optional[torch.Tensor] = None,
                      src_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        q = k = v = src
-        src2 = self.self_attn(q, k, value=v, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)[0]
+        src2 = self.self_attn(src, src, value=src, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
         src = self.norm1(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
@@ -256,8 +255,7 @@ class TransformerEncoderLayer(nn.Module):
                     src_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
 
         src2 = self.norm1(src)
-        q = k = v = src2
-        src2 = self.self_attn(q, k, value=v, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)[0]
+        src2 = self.self_attn(src2, src2, value=src2, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
         src2 = self.norm2(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src2))))
@@ -277,7 +275,7 @@ class TransformerDecoderLayer(nn.Module):
 
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation: str = "relu", normalize_before: bool = False, norm_eps: float = 1e-5) -> None:
-        super().__init__()
+        super(TransformerDecoderLayer, self).__init__()
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         self.d_model = d_model
@@ -320,19 +318,13 @@ class TransformerDecoderLayer(nn.Module):
                     tgt_mask: Optional[torch.Tensor] = None,
                     memory_mask: Optional[torch.Tensor] = None,
                     tgt_key_padding_mask: Optional[torch.Tensor] = None,
-                    memory_key_padding_mask: Optional[torch.Tensor] = None,
-                    pos: Optional[torch.Tensor] = None,
-                    query_pos: Optional[torch.Tensor] = None) -> torch.Tensor:
-
+                    memory_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         tgt2 = self.norm1(tgt)
-        q = k = self.with_pos_embed(tgt2, query_pos)
-        tgt2 = self.self_attn(q, k, value=tgt2, attn_mask=tgt_mask,
+        tgt2 = self.self_attn(tgt2, tgt2, value=tgt2, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
         tgt = tgt + self.dropout1(tgt2)
         tgt2 = self.norm2(tgt)
-        tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt2, query_pos),
-                                   key=self.with_pos_embed(memory, pos),
-                                   value=memory, attn_mask=memory_mask,
+        tgt2 = self.multihead_attn(query=tgt2, key=memory, value=memory, attn_mask=memory_mask,
                                    key_padding_mask=memory_key_padding_mask)[0]
         tgt = tgt + self.dropout2(tgt2)
         tgt2 = self.norm3(tgt)
@@ -346,14 +338,11 @@ class TransformerDecoderLayer(nn.Module):
                 tgt_mask: Optional[torch.Tensor] = None,
                 memory_mask: Optional[torch.Tensor] = None,
                 tgt_key_padding_mask: Optional[torch.Tensor] = None,
-                memory_key_padding_mask: Optional[torch.Tensor] = None,
-                pos: Optional[torch.Tensor] = None,
-                query_pos: Optional[torch.Tensor] = None) -> torch.Tensor:
+                memory_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if self.normalize_before:
             return self.forward_pre(tgt, memory, tgt_mask, memory_mask,
-                                    tgt_key_padding_mask, memory_key_padding_mask, pos, query_pos)
-        return self.forward_post(tgt, memory, tgt_mask, memory_mask,
-                                 tgt_key_padding_mask, memory_key_padding_mask, pos, query_pos)
+                                    tgt_key_padding_mask, memory_key_padding_mask)
+        return self.forward_post(tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
 
 
 def _get_clone(module: nn.Module) -> nn.Module:
