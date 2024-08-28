@@ -24,7 +24,6 @@ class MldDenoiser(nn.Module):
                  normalize_before: bool = False,
                  activation: str = "gelu",
                  flip_sin_to_cos: bool = True,
-                 return_intermediate_dec: bool = False,
                  position_embedding: str = "learned",
                  arch: str = "trans_enc",
                  freq_shift: float = 0,
@@ -58,33 +57,10 @@ class MldDenoiser(nn.Module):
                 ff_size,
                 dropout,
                 activation,
-                normalize_before,
-            )
+                normalize_before)
             encoder_norm = None if is_controlnet else nn.LayerNorm(self.latent_dim)
             self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
                                                   return_intermediate=is_controlnet)
-
-        elif self.arch == "trans_dec":
-            assert not is_controlnet, f"controlnet not supported in architecture: 'trans_dec'"
-            self.mem_pos = build_position_encoding(
-                self.latent_dim, position_embedding=position_embedding)
-
-            decoder_layer = TransformerDecoderLayer(
-                self.latent_dim,
-                num_heads,
-                ff_size,
-                dropout,
-                activation,
-                normalize_before,
-            )
-            decoder_norm = nn.LayerNorm(self.latent_dim)
-            self.decoder = TransformerDecoder(
-                decoder_layer,
-                num_layers,
-                decoder_norm,
-                return_intermediate=return_intermediate_dec,
-            )
-
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
 
@@ -160,17 +136,82 @@ class MldDenoiser(nn.Module):
 
             sample = tokens[:sample.shape[0]]
 
-        elif self.arch == "trans_dec":
-            # tgt    - [1 or 5 or 10, bs, latent_dim]
-            # memory - [token_num, bs, latent_dim]
-            sample = self.query_pos(sample)
-            emb_latent = self.mem_pos(emb_latent)
-            sample = self.decoder(tgt=sample, memory=emb_latent).squeeze(0)
-
         else:
             raise TypeError(f"{self.arch} is not supported")
 
         sample = self.latent_post(sample)
         # 5. [latent_dim[0], batch_size, latent_dim[1]] -> [batch_size, latent_dim[0], latent_dim[1]]
+        sample = sample.permute(1, 0, 2)
+        return sample
+
+
+class MldDenoiserV2(nn.Module):
+
+    def __init__(self,
+                 latent_dim: list = [1, 256],
+                 ff_size: int = 1024,
+                 num_layers: int = 6,
+                 num_heads: int = 4,
+                 dropout: float = 0.1,
+                 normalize_before: bool = False,
+                 activation: str = "gelu",
+                 flip_sin_to_cos: bool = True,
+                 position_embedding: str = "learned",
+                 freq_shift: float = 0,
+                 time_embed_dim: int = 512,
+                 text_dim: int = 512,
+                 time_cond_proj_dim=None,
+                 **kwargs) -> None:
+        super(MldDenoiserV2, self).__init__()
+        self.latent_dim = latent_dim[-1]
+        self.time_cond_proj_dim = time_cond_proj_dim
+
+        from mld.models.operator.attention import _get_clone
+        self.query_pos = build_position_encoding(
+            self.latent_dim, position_embedding=position_embedding)
+
+        self.embed_text = nn.Sequential(
+            nn.Linear(text_dim, self.latent_dim),
+            nn.LayerNorm(self.latent_dim)
+        )
+
+        decoder_layer = TransformerDecoderLayer(
+            self.latent_dim,
+            num_heads,
+            ff_size,
+            dropout,
+            activation,
+            normalize_before)
+
+        time_mlp = nn.Sequential(nn.Mish(), nn.Linear(time_embed_dim, self.latent_dim * 2))
+        nn.init.zeros_(time_mlp[1].weight)
+        nn.init.zeros_(time_mlp[1].bias)
+
+        self.layers_dec = nn.ModuleList([(_get_clone(decoder_layer)) for _ in range(num_layers)])
+        self.layers_mlp = nn.ModuleList([_get_clone(time_mlp) for _ in range(num_layers)])
+
+        self.time_proj = Timesteps(time_embed_dim, flip_sin_to_cos, freq_shift)
+        self.time_embedding = nn.Sequential(
+            nn.Mish(), nn.Linear(time_embed_dim, time_embed_dim * 4),
+            nn.Mish(), nn.Linear(time_embed_dim * 4, time_embed_dim))
+
+    def forward(self,
+                sample: torch.Tensor,
+                timestep: torch.Tensor,
+                encoder_hidden_states: torch.Tensor, **kwargs) -> Union[torch.Tensor, list[torch.Tensor]]:
+        sample = sample.permute(1, 0, 2)
+        timesteps = timestep.expand(sample.shape[1]).clone()
+        time_emb = self.time_proj(timesteps)
+        time_emb = time_emb.to(dtype=sample.dtype)
+        # [1, bs, latent_dim] <= [bs, latent_dim]
+        time_emb = self.time_embedding(time_emb).unsqueeze(0)
+        sample = self.query_pos(sample)
+        encoder_hidden_states = self.embed_text(encoder_hidden_states)
+        encoder_hidden_states = encoder_hidden_states.permute(1, 0, 2)
+        for decoder_layer, time_mlp in zip(self.layers_dec, self.layers_mlp):
+            time_emb_2 = time_mlp(time_emb)
+            scale, shift = time_emb_2.chunk(2, dim=-1)
+            sample = sample * (1 + scale) + shift
+            sample = decoder_layer(sample, encoder_hidden_states)
         sample = sample.permute(1, 0, 2)
         return sample
