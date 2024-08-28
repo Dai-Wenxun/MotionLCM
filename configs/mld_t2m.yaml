@@ -4,7 +4,6 @@ TEST_FOLDER: './experiments_t2m_test'
 NAME: 'mld_humanml'
 
 TRAIN:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 64
   SPLIT: 'train'
   NUM_WORKERS: 8
@@ -31,13 +30,11 @@ TRAIN:
   model_ema_decay: 0.9999
 
 VAL:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: test
   NUM_WORKERS: 12
 
 TEST:
-  DATASET: 'humanml3d'
   SPLIT: test
   BATCH_SIZE: 1
   NUM_WORKERS: 12
@@ -52,6 +49,7 @@ TEST:
   DIVERSITY_TIMES: 300
 
 DATASET:
+  NAME: 'humanml3d'
   SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
@@ -62,6 +60,8 @@ DATASET:
     MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
+  PADDING_TO_MAX: false
+  WINDOW_SIZE: 64
 
 METRIC:
   DIST_SYNC_ON_STEP: True

@@ -15,7 +15,6 @@ from mld.models.operator.attention import (
 )
 from mld.models.operator.conv import ResEncoder, ResDecoder
 from mld.models.operator.position_encoding import build_position_encoding
-from mld.utils.temos_utils import lengths_to_mask
 
 
 class MldVae(nn.Module):
@@ -29,10 +28,10 @@ class MldVae(nn.Module):
                  dropout: float = 0.1,
                  arch: str = "encoder_decoder",
                  normalize_before: bool = False,
+                 norm_eps: float = 1e-5,
                  activation: str = "gelu",
                  position_embedding: str = "learned") -> None:
-
-        super().__init__()
+        super(MldVae, self).__init__()
 
         self.latent_size = latent_dim[0]
         self.latent_dim = latent_dim[-1]
@@ -48,15 +47,14 @@ class MldVae(nn.Module):
             dropout,
             activation,
             normalize_before,
+            norm_eps
         )
         encoder_norm = nn.LayerNorm(self.latent_dim)
-        self.encoder = SkipTransformerEncoder(encoder_layer, num_layers,
-                                              encoder_norm)
+        self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm)
 
         if self.arch == "all_encoder":
             decoder_norm = nn.LayerNorm(self.latent_dim)
-            self.decoder = SkipTransformerEncoder(encoder_layer, num_layers,
-                                                  decoder_norm)
+            self.decoder = SkipTransformerEncoder(encoder_layer, num_layers, decoder_norm)
         elif self.arch == 'encoder_decoder':
             self.query_pos_decoder = build_position_encoding(
                 self.latent_dim, position_embedding=position_embedding)
@@ -68,10 +66,10 @@ class MldVae(nn.Module):
                 dropout,
                 activation,
                 normalize_before,
+                norm_eps
             )
             decoder_norm = nn.LayerNorm(self.latent_dim)
-            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers,
-                                                  decoder_norm)
+            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm)
         else:
             raise ValueError(f"Not support architecture: {self.arch}!")
 
