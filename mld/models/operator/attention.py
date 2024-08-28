@@ -82,13 +82,13 @@ class SkipTransformerEncoder(nn.Module):
 
 class SkipTransformerDecoder(nn.Module):
     def __init__(self, decoder_layer: nn.Module, num_layers: int,
-                 norm: Optional[nn.Module] = None) -> None:
+                 norm: Optional[nn.Module] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.d_model = decoder_layer.d_model
 
         self.num_layers = num_layers
         self.norm = norm
-
+        self.return_intermediate = return_intermediate
         assert num_layers % 2 == 1
 
         num_block = (num_layers - 1) // 2
@@ -170,32 +170,43 @@ class SkipTransformerDecoder(nn.Module):
 class TransformerEncoder(nn.Module):
 
     def __init__(self, encoder_layer: nn.Module, num_layers: int,
-                 norm: Optional[nn.Module] = None) -> None:
+                 norm: Optional[nn.Module] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
         self.norm = norm
+        self.return_intermediate = return_intermediate
 
     def forward(self, src: torch.Tensor,
                 mask: Optional[torch.Tensor] = None,
                 src_key_padding_mask: Optional[torch.Tensor] = None,
-                pos: Optional[torch.Tensor] = None) -> torch.Tensor:
+                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> torch.Tensor:
         output = src
-
+        intermediate = []
+        index = 0
         for layer in self.layers:
-            output = layer(output, src_mask=mask,
-                           src_key_padding_mask=src_key_padding_mask, pos=pos)
+            output = layer(output, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
+
+            if controlnet_residuals is not None:
+                output = output + controlnet_residuals[index]
+                index += 1
+
+            if self.return_intermediate:
+                intermediate.append(output)
 
         if self.norm is not None:
             output = self.norm(output)
+
+        if self.return_intermediate:
+            return torch.stack(intermediate)
 
         return output
 
 
 class TransformerDecoder(nn.Module):
 
-    def __init__(self, decoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
-                 return_intermediate: bool = False) -> None:
+    def __init__(self, decoder_layer: nn.Module, num_layers: int,
+                 norm: Optional[nn.Module] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.layers = _get_clones(decoder_layer, num_layers)
         self.num_layers = num_layers
@@ -209,31 +220,30 @@ class TransformerDecoder(nn.Module):
                 memory_mask: Optional[torch.Tensor] = None,
                 tgt_key_padding_mask: Optional[torch.Tensor] = None,
                 memory_key_padding_mask: Optional[torch.Tensor] = None,
-                pos: Optional[torch.Tensor] = None,
-                query_pos: Optional[torch.Tensor] = None) -> torch.Tensor:
+                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> torch.Tensor:
         output = tgt
-
         intermediate = []
-
+        index = 0
         for layer in self.layers:
             output = layer(output, memory, tgt_mask=tgt_mask,
                            memory_mask=memory_mask,
                            tgt_key_padding_mask=tgt_key_padding_mask,
-                           memory_key_padding_mask=memory_key_padding_mask,
-                           pos=pos, query_pos=query_pos)
+                           memory_key_padding_mask=memory_key_padding_mask)
+
+            if controlnet_residuals is not None:
+                output = output + controlnet_residuals[index]
+                index += 1
+
             if self.return_intermediate:
                 intermediate.append(output)
 
         if self.norm is not None:
             output = self.norm(output)
-            if self.return_intermediate:
-                intermediate.pop()
-                intermediate.append(output)
 
         if self.return_intermediate:
             return torch.stack(intermediate)
 
-        return output.unsqueeze(0)
+        return output
 
 
 class TransformerEncoderLayer(nn.Module):
