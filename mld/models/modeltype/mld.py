@@ -281,7 +281,9 @@ class MLD(BaseModel):
 
         # motion encode
         with torch.no_grad():
-            z, dist = self.vae.encode(feats_ref, lengths)
+            padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+            mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
+            z, dist = self.vae.encode(feats_ref, mask)
 
         text = batch["text"]
         # classifier free guidance: randomly drop text during training
@@ -396,8 +398,10 @@ class MLD(BaseModel):
         self.diffusion_times.append(diff_et - diff_st)
 
         with torch.no_grad():
+            padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+            mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
             vae_st = time.time()
-            feats_rst = self.vae.decode(z, lengths)
+            feats_rst = self.vae.decode(z, mask)
             vae_et = time.time()
             self.vae_decode_times.append(vae_et - vae_st)
 

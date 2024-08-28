@@ -33,15 +33,13 @@ class SkipTransformerEncoder(nn.Module):
     def forward(self, src: torch.Tensor,
                 mask: Optional[torch.Tensor] = None,
                 src_key_padding_mask: Optional[torch.Tensor] = None,
-                pos: Optional[torch.Tensor] = None,
                 controlnet_residuals: Optional[list[torch.Tensor]] = None) -> torch.Tensor:
         x = src
         intermediate = []
         index = 0
         xs = []
         for module in self.input_blocks:
-            x = module(x, src_mask=mask,
-                       src_key_padding_mask=src_key_padding_mask, pos=pos)
+            x = module(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
 
             if controlnet_residuals is not None:
                 x = x + controlnet_residuals[index]
@@ -52,8 +50,7 @@ class SkipTransformerEncoder(nn.Module):
             if self.return_intermediate:
                 intermediate.append(x)
 
-        x = self.middle_block(x, src_mask=mask,
-                              src_key_padding_mask=src_key_padding_mask, pos=pos)
+        x = self.middle_block(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
 
         if controlnet_residuals is not None:
             x = x + controlnet_residuals[index]
@@ -65,8 +62,7 @@ class SkipTransformerEncoder(nn.Module):
         for (module, linear) in zip(self.output_blocks, self.linear_blocks):
             x = torch.cat([x, xs.pop()], dim=-1)
             x = linear(x)
-            x = module(x, src_mask=mask,
-                       src_key_padding_mask=src_key_padding_mask, pos=pos)
+            x = module(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
 
             if controlnet_residuals is not None:
                 x = x + controlnet_residuals[index]
@@ -114,9 +110,7 @@ class SkipTransformerDecoder(nn.Module):
                 tgt_mask: Optional[torch.Tensor] = None,
                 memory_mask: Optional[torch.Tensor] = None,
                 tgt_key_padding_mask: Optional[torch.Tensor] = None,
-                memory_key_padding_mask: Optional[torch.Tensor] = None,
-                pos: Optional[torch.Tensor] = None,
-                query_pos: Optional[torch.Tensor] = None) -> torch.Tensor:
+                memory_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         x = tgt
 
         xs = []
@@ -124,15 +118,13 @@ class SkipTransformerDecoder(nn.Module):
             x = module(x, memory, tgt_mask=tgt_mask,
                        memory_mask=memory_mask,
                        tgt_key_padding_mask=tgt_key_padding_mask,
-                       memory_key_padding_mask=memory_key_padding_mask,
-                       pos=pos, query_pos=query_pos)
+                       memory_key_padding_mask=memory_key_padding_mask)
             xs.append(x)
 
         x = self.middle_block(x, memory, tgt_mask=tgt_mask,
                               memory_mask=memory_mask,
                               tgt_key_padding_mask=tgt_key_padding_mask,
-                              memory_key_padding_mask=memory_key_padding_mask,
-                              pos=pos, query_pos=query_pos)
+                              memory_key_padding_mask=memory_key_padding_mask)
 
         for (module, linear) in zip(self.output_blocks, self.linear_blocks):
             x = torch.cat([x, xs.pop()], dim=-1)
@@ -140,8 +132,7 @@ class SkipTransformerDecoder(nn.Module):
             x = module(x, memory, tgt_mask=tgt_mask,
                        memory_mask=memory_mask,
                        tgt_key_padding_mask=tgt_key_padding_mask,
-                       memory_key_padding_mask=memory_key_padding_mask,
-                       pos=pos, query_pos=query_pos)
+                       memory_key_padding_mask=memory_key_padding_mask)
 
         if self.norm is not None:
             x = self.norm(x)
