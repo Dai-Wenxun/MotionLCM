@@ -32,7 +32,6 @@ class MldDenoiser(nn.Module):
                  time_dim: int = 768,
                  time_cond_proj_dim: int = None,
                  is_controlnet: bool = False) -> None:
-
         super().__init__()
 
         self.latent_dim = latent_dim[-1] * alpha
@@ -92,9 +91,7 @@ class MldDenoiser(nn.Module):
                 controlnet_cond: Optional[torch.Tensor] = None,
                 controlnet_residuals: Optional[list[torch.Tensor]] = None
                 ) -> Union[torch.Tensor, list[torch.Tensor]]:
-
-        # 0. dimension matching
-        # [batch_size, latent_dim[0], latent_dim[1]] -> [latent_dim[0], batch_size, latent_dim[1]]
+        # 0. dimension matching (pre)
         sample = sample.permute(1, 0, 2)
         sample = self.latent_pre(sample)
 
@@ -104,7 +101,6 @@ class MldDenoiser(nn.Module):
             sample = sample + self.controlnet_cond_embedding(controlnet_cond)
 
         # 2. time_embedding
-        # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
         timesteps = timestep.expand(sample.shape[1]).clone()
         time_emb = self.time_proj(timesteps)
         time_emb = time_emb.to(dtype=sample.dtype)
@@ -114,19 +110,16 @@ class MldDenoiser(nn.Module):
         # 3. condition + time embedding
         # text_emb [seq_len, batch_size, text_dim] <= [batch_size, seq_len, text_dim]
         encoder_hidden_states = encoder_hidden_states.permute(1, 0, 2)
-        text_emb = encoder_hidden_states  # [num_words, bs, latent_dim]
         # text embedding projection
         if self.text_dim != self.latent_dim:
-            # [1 or 2, bs, latent_dim] <= [1 or 2, bs, text_dim]
-            text_emb_latent = self.emb_proj(text_emb)
+            text_emb_latent = self.emb_proj(encoder_hidden_states)
         else:
-            text_emb_latent = text_emb
+            text_emb_latent = encoder_hidden_states
         emb_latent = torch.cat((time_emb, text_emb_latent), 0)
 
         # 4. transformer
         if self.arch == "trans_enc":
             xseq = torch.cat((sample, emb_latent), axis=0)
-
             xseq = self.query_pos(xseq)
             tokens = self.encoder(xseq, controlnet_residuals=controlnet_residuals)
 
@@ -138,12 +131,11 @@ class MldDenoiser(nn.Module):
                 return control_res_samples
 
             sample = tokens[:sample.shape[0]]
-
         else:
             raise TypeError(f"{self.arch} is not supported")
 
+        # 5. dimension matching (post)
         sample = self.latent_post(sample)
-        # 5. [latent_dim[0], batch_size, latent_dim[1]] -> [batch_size, latent_dim[0], latent_dim[1]]
         sample = sample.permute(1, 0, 2)
         return sample
 
