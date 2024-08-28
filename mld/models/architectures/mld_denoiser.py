@@ -9,6 +9,7 @@ from mld.models.operator.attention import (SkipTransformerEncoder,
                                            TransformerDecoderLayer,
                                            TransformerEncoder,
                                            TransformerEncoderLayer)
+from mld.models.operator.attention import get_clones
 from mld.models.operator.position_encoding import build_position_encoding
 
 
@@ -18,7 +19,7 @@ class MldDenoiser(nn.Module):
                  latent_dim: list = [1, 256],
                  alpha: int = 1,
                  ff_size: int = 1024,
-                 num_layers: int = 6,
+                 num_layers: int = 9,
                  num_heads: int = 4,
                  dropout: float = 0.1,
                  normalize_before: bool = False,
@@ -30,9 +31,9 @@ class MldDenoiser(nn.Module):
                  freq_shift: float = 0,
                  text_dim: int = 768,
                  time_dim: int = 768,
-                 time_cond_proj_dim: int = None,
+                 time_cond_proj_dim: Optional[int] = None,
                  is_controlnet: bool = False) -> None:
-        super().__init__()
+        super(MldDenoiser, self).__init__()
 
         self.latent_dim = latent_dim[-1] * alpha
         self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if alpha != 1 else nn.Identity()
@@ -45,8 +46,7 @@ class MldDenoiser(nn.Module):
 
         self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
         self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, cond_proj_dim=time_cond_proj_dim)
-        if text_dim != self.latent_dim:
-            self.emb_proj = nn.Sequential(nn.ReLU(), nn.Linear(text_dim, self.latent_dim))
+        self.emb_proj = nn.Sequential(nn.ReLU(), nn.Linear(text_dim, self.latent_dim))
 
         self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
 
@@ -111,10 +111,7 @@ class MldDenoiser(nn.Module):
         # text_emb [seq_len, batch_size, text_dim] <= [batch_size, seq_len, text_dim]
         encoder_hidden_states = encoder_hidden_states.permute(1, 0, 2)
         # text embedding projection
-        if self.text_dim != self.latent_dim:
-            text_emb_latent = self.emb_proj(encoder_hidden_states)
-        else:
-            text_emb_latent = encoder_hidden_states
+        text_emb_latent = self.emb_proj(encoder_hidden_states)
         emb_latent = torch.cat((time_emb, text_emb_latent), 0)
 
         # 4. transformer
@@ -144,31 +141,47 @@ class MldDenoiserV2(nn.Module):
 
     def __init__(self,
                  latent_dim: list = [1, 256],
+                 alpha: int = 1,
                  ff_size: int = 1024,
-                 num_layers: int = 6,
+                 num_layers: int = 9,
                  num_heads: int = 4,
                  dropout: float = 0.1,
                  normalize_before: bool = False,
+                 norm_eps: float = 1e-5,
                  activation: str = "gelu",
                  flip_sin_to_cos: bool = True,
                  position_embedding: str = "learned",
                  freq_shift: float = 0,
-                 time_embed_dim: int = 512,
                  text_dim: int = 512,
-                 time_cond_proj_dim=None,
+                 text_fusion_layers: int = 4,
+                 time_dim: int = 512,
+                 time_cond_proj_dim: Optional[int] = None,
                  **kwargs) -> None:
         super(MldDenoiserV2, self).__init__()
+
         self.latent_dim = latent_dim[-1]
+        self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if alpha != 1 else nn.Identity()
+        self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if alpha != 1 else nn.Identity()
+
         self.time_cond_proj_dim = time_cond_proj_dim
 
-        from mld.models.operator.attention import _get_clone
-        self.query_pos = build_position_encoding(
-            self.latent_dim, position_embedding=position_embedding)
+        self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
 
-        self.embed_text = nn.Sequential(
-            nn.Linear(text_dim, self.latent_dim),
-            nn.LayerNorm(self.latent_dim)
-        )
+        self.embed_text = nn.Linear(text_dim, self.latent_dim)
+        if text_fusion_layers > 1:
+            text_encoder_layer = TransformerEncoderLayer(
+                self.latent_dim,
+                num_heads,
+                ff_size,
+                dropout,
+                activation,
+                normalize_before,
+                norm_eps
+            )
+            self.textTransEncoder = get_clones(text_encoder_layer, text_fusion_layers)
+        else:
+            self.textTransEncoder = None
+        self.text_ln = nn.LayerNorm(self.latent_dim, eps=norm_eps)
 
         decoder_layer = TransformerDecoderLayer(
             self.latent_dim,
@@ -176,37 +189,47 @@ class MldDenoiserV2(nn.Module):
             ff_size,
             dropout,
             activation,
-            normalize_before)
+            normalize_before,
+            norm_eps
+        )
 
-        time_mlp = nn.Sequential(nn.Mish(), nn.Linear(time_embed_dim, self.latent_dim * 2))
+        time_mlp = nn.Sequential(nn.Mish(), nn.Linear(time_dim, self.latent_dim * 2))
         nn.init.zeros_(time_mlp[1].weight)
         nn.init.zeros_(time_mlp[1].bias)
 
-        self.layers_dec = nn.ModuleList([(_get_clone(decoder_layer)) for _ in range(num_layers)])
-        self.layers_mlp = nn.ModuleList([_get_clone(time_mlp) for _ in range(num_layers)])
+        self.layers_dec = get_clones(decoder_layer, num_layers)
+        self.layers_mlp = get_clones(time_mlp, num_layers)
 
-        self.time_proj = Timesteps(time_embed_dim, flip_sin_to_cos, freq_shift)
+        self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
         self.time_embedding = nn.Sequential(
-            nn.Mish(), nn.Linear(time_embed_dim, time_embed_dim * 4),
-            nn.Mish(), nn.Linear(time_embed_dim * 4, time_embed_dim))
+            nn.Linear(time_dim, time_dim * 4), nn.Mish(),
+            nn.Linear(time_dim * 4, time_dim))
 
     def forward(self,
                 sample: torch.Tensor,
                 timestep: torch.Tensor,
                 encoder_hidden_states: torch.Tensor, **kwargs) -> Union[torch.Tensor, list[torch.Tensor]]:
         sample = sample.permute(1, 0, 2)
+        sample = self.latent_pre(sample)
+
         timesteps = timestep.expand(sample.shape[1]).clone()
         time_emb = self.time_proj(timesteps)
         time_emb = time_emb.to(dtype=sample.dtype)
         # [1, bs, latent_dim] <= [bs, latent_dim]
         time_emb = self.time_embedding(time_emb).unsqueeze(0)
+
         sample = self.query_pos(sample)
         encoder_hidden_states = self.embed_text(encoder_hidden_states)
+        if self.textTransEncoder:
+            encoder_hidden_states = self.textTransEncoder(encoder_hidden_states)
+        encoder_hidden_states = self.text_ln(encoder_hidden_states)
         encoder_hidden_states = encoder_hidden_states.permute(1, 0, 2)
         for decoder_layer, time_mlp in zip(self.layers_dec, self.layers_mlp):
             time_emb_2 = time_mlp(time_emb)
             scale, shift = time_emb_2.chunk(2, dim=-1)
             sample = sample * (1 + scale) + shift
             sample = decoder_layer(sample, encoder_hidden_states)
+
+        sample = self.latent_post(sample)
         sample = sample.permute(1, 0, 2)
         return sample
