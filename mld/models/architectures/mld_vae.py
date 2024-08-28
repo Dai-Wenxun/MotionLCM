@@ -73,9 +73,7 @@ class MldVae(nn.Module):
         else:
             raise ValueError(f"Not support architecture: {self.arch}!")
 
-        self.global_motion_token = nn.Parameter(
-            torch.randn(self.latent_size * 2, self.latent_dim))
-
+        self.global_motion_token = nn.Parameter(torch.randn(self.latent_size * 2, self.latent_dim))
         self.skel_embedding = nn.Linear(nfeats, self.latent_dim)
         self.final_layer = nn.Linear(self.latent_dim, nfeats)
 
@@ -86,23 +84,11 @@ class MldVae(nn.Module):
 
     def encode(self, features: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, Distribution]:
         bs, nframes, nfeats = features.shape
-
-        x = features
-        # Embed each human poses into latent vectors
-        x = self.skel_embedding(x)
-
-        # Switch sequence and batch_size because the input of
-        # Pytorch Transformer is [Sequence, Batch size, ...]
-        x = x.permute(1, 0, 2)  # now it is [nframes, bs, latent_dim]
-
-        # Each batch has its own set of tokens
+        x = self.skel_embedding(features)
+        x = x.permute(1, 0, 2)
         dist = torch.tile(self.global_motion_token[:, None, :], (1, bs, 1))
-
-        # create a bigger mask, to allow attend to emb
         dist_masks = torch.ones((bs, dist.shape[0]), dtype=torch.bool, device=x.device)
         aug_mask = torch.cat((dist_masks, mask), 1)
-
-        # adding the embedding token for all sequences
         xseq = torch.cat((dist, x), 0)
 
         xseq = self.query_pos_encoder(xseq)
@@ -111,7 +97,6 @@ class MldVae(nn.Module):
         mu = dist[0:self.latent_size, ...]
         logvar = dist[self.latent_size:, ...]
 
-        # resampling
         std = logvar.exp().pow(0.5)
         dist = torch.distributions.Normal(mu, std)
         latent = dist.rsample()
@@ -137,9 +122,7 @@ class MldVae(nn.Module):
             output = self.decoder(tgt=queries, memory=z, tgt_key_padding_mask=~mask)
 
         output = self.final_layer(output)
-        # zero for padded area
         output[~mask.T] = 0
-        # Pytorch Transformer: [Sequence, Batch size, ...]
         feats = output.permute(1, 0, 2)
         return feats
 
