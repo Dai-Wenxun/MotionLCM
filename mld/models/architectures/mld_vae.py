@@ -134,10 +134,7 @@ class MldVae(nn.Module):
 
         elif self.arch == "encoder_decoder":
             queries = self.query_pos_decoder(queries)
-            output = self.decoder(
-                tgt=queries,
-                memory=z,
-                tgt_key_padding_mask=~mask)
+            output = self.decoder(tgt=queries, memory=z, tgt_key_padding_mask=~mask)
 
         output = self.final_layer(output)
         # zero for padded area
