@@ -79,10 +79,9 @@ class MldVae(nn.Module):
         self.skel_embedding = nn.Linear(nfeats, self.latent_dim)
         self.final_layer = nn.Linear(self.latent_dim, nfeats)
 
-    def forward(self, features: torch.Tensor,
-                lengths: Optional[list[int]] = None) -> tuple[torch.Tensor, torch.Tensor, Distribution]:
-        z, dist = self.encode(features, lengths)
-        feats_rst = self.decode(z, lengths)
+    def forward(self, features: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, Distribution]:
+        z, dist = self.encode(features, mask)
+        feats_rst = self.decode(z, mask)
         return feats_rst, z, dist
 
     def encode(self, features: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, Distribution]:
