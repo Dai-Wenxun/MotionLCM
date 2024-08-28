@@ -49,11 +49,11 @@ class MldVae(nn.Module):
             normalize_before,
             norm_eps
         )
-        encoder_norm = nn.LayerNorm(self.latent_dim)
+        encoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps)
         self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm)
 
         if self.arch == "all_encoder":
-            decoder_norm = nn.LayerNorm(self.latent_dim)
+            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps)
             self.decoder = SkipTransformerEncoder(encoder_layer, num_layers, decoder_norm)
         elif self.arch == 'encoder_decoder':
             self.query_pos_decoder = build_position_encoding(
@@ -68,7 +68,7 @@ class MldVae(nn.Module):
                 normalize_before,
                 norm_eps
             )
-            decoder_norm = nn.LayerNorm(self.latent_dim)
+            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps)
             self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm)
         else:
             raise ValueError(f"Not support architecture: {self.arch}!")

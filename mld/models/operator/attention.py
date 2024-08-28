@@ -110,21 +110,38 @@ class SkipTransformerDecoder(nn.Module):
                 tgt_mask: Optional[torch.Tensor] = None,
                 memory_mask: Optional[torch.Tensor] = None,
                 tgt_key_padding_mask: Optional[torch.Tensor] = None,
-                memory_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+                memory_key_padding_mask: Optional[torch.Tensor] = None,
+                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> torch.Tensor:
         x = tgt
-
+        intermediate = []
+        index = 0
         xs = []
         for module in self.input_blocks:
             x = module(x, memory, tgt_mask=tgt_mask,
                        memory_mask=memory_mask,
                        tgt_key_padding_mask=tgt_key_padding_mask,
                        memory_key_padding_mask=memory_key_padding_mask)
+
+            if controlnet_residuals is not None:
+                x = x + controlnet_residuals[index]
+                index += 1
+
             xs.append(x)
+
+            if self.return_intermediate:
+                intermediate.append(x)
 
         x = self.middle_block(x, memory, tgt_mask=tgt_mask,
                               memory_mask=memory_mask,
                               tgt_key_padding_mask=tgt_key_padding_mask,
                               memory_key_padding_mask=memory_key_padding_mask)
+
+        if controlnet_residuals is not None:
+            x = x + controlnet_residuals[index]
+            index += 1
+
+        if self.return_intermediate:
+            intermediate.append(x)
 
         for (module, linear) in zip(self.output_blocks, self.linear_blocks):
             x = torch.cat([x, xs.pop()], dim=-1)
@@ -134,8 +151,18 @@ class SkipTransformerDecoder(nn.Module):
                        tgt_key_padding_mask=tgt_key_padding_mask,
                        memory_key_padding_mask=memory_key_padding_mask)
 
+            if controlnet_residuals is not None:
+                x = x + controlnet_residuals[index]
+                index += 1
+
+            if self.return_intermediate:
+                intermediate.append(x)
+
         if self.norm is not None:
             x = self.norm(x)
+
+        if self.return_intermediate:
+            return torch.stack(intermediate)
 
         return x
 
