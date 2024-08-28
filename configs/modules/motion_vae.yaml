@@ -7,6 +7,7 @@ motion_vae:
     num_heads: 4
     dropout: 0.1
     normalize_before: false
+    norm_eps: 1e-5
     activation: 'gelu'
     position_embedding: 'learned'
     latent_dim: ${model.latent_dim}

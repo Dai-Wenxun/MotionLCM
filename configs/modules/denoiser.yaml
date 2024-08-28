@@ -10,7 +10,6 @@ denoiser:
     normalize_before: false
     activation: 'gelu'
     flip_sin_to_cos: true
-    return_intermediate_dec: false
     position_embedding: 'learned'
     arch: 'trans_enc'
     freq_shift: 0
