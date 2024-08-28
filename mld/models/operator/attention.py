@@ -2,8 +2,8 @@ import copy
 from typing import Optional, Callable
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor, nn
 
 
 class SkipTransformerEncoder(nn.Module):
