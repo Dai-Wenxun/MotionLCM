@@ -22,12 +22,14 @@ class MldDenoiser(nn.Module):
                  num_heads: int = 4,
                  dropout: float = 0.1,
                  normalize_before: bool = False,
+                 norm_eps: float = 1e-5,
                  activation: str = "gelu",
                  flip_sin_to_cos: bool = True,
                  position_embedding: str = "learned",
                  arch: str = "trans_enc",
                  freq_shift: float = 0,
-                 text_encoded_dim: int = 768,
+                 text_dim: int = 768,
+                 time_dim: int = 768,
                  time_cond_proj_dim: int = None,
                  is_controlnet: bool = False) -> None:
 
@@ -37,18 +39,17 @@ class MldDenoiser(nn.Module):
         self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if alpha != 1 else nn.Identity()
         self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if alpha != 1 else nn.Identity()
 
-        self.text_encoded_dim = text_encoded_dim
+        self.text_dim = text_dim
 
         self.arch = arch
         self.time_cond_proj_dim = time_cond_proj_dim
 
-        self.time_proj = Timesteps(text_encoded_dim, flip_sin_to_cos, freq_shift)
-        self.time_embedding = TimestepEmbedding(text_encoded_dim, self.latent_dim, cond_proj_dim=time_cond_proj_dim)
-        if text_encoded_dim != self.latent_dim:
-            self.emb_proj = nn.Sequential(nn.ReLU(), nn.Linear(text_encoded_dim, self.latent_dim))
+        self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
+        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, cond_proj_dim=time_cond_proj_dim)
+        if text_dim != self.latent_dim:
+            self.emb_proj = nn.Sequential(nn.ReLU(), nn.Linear(text_dim, self.latent_dim))
 
-        self.query_pos = build_position_encoding(
-            self.latent_dim, position_embedding=position_embedding)
+        self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
 
         if self.arch == "trans_enc":
             encoder_layer = TransformerEncoderLayer(
@@ -57,8 +58,10 @@ class MldDenoiser(nn.Module):
                 ff_size,
                 dropout,
                 activation,
-                normalize_before)
-            encoder_norm = None if is_controlnet else nn.LayerNorm(self.latent_dim)
+                normalize_before,
+                norm_eps
+            )
+            encoder_norm = None if is_controlnet else nn.LayerNorm(self.latent_dim, eps=norm_eps)
             self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
                                                   return_intermediate=is_controlnet)
         else:
@@ -66,7 +69,7 @@ class MldDenoiser(nn.Module):
 
         self.is_controlnet = is_controlnet
 
-        def zero_module(module):
+        def zero_module(module: nn.Module) -> nn.Module:
             for p in module.parameters():
                 nn.init.zeros_(p)
             return module
@@ -109,12 +112,12 @@ class MldDenoiser(nn.Module):
         time_emb = self.time_embedding(time_emb, timestep_cond).unsqueeze(0)
 
         # 3. condition + time embedding
-        # text_emb [seq_len, batch_size, text_encoded_dim] <= [batch_size, seq_len, text_encoded_dim]
+        # text_emb [seq_len, batch_size, text_dim] <= [batch_size, seq_len, text_dim]
         encoder_hidden_states = encoder_hidden_states.permute(1, 0, 2)
         text_emb = encoder_hidden_states  # [num_words, bs, latent_dim]
         # text embedding projection
-        if self.text_encoded_dim != self.latent_dim:
-            # [1 or 2, bs, latent_dim] <= [1 or 2, bs, text_encoded_dim]
+        if self.text_dim != self.latent_dim:
+            # [1 or 2, bs, latent_dim] <= [1 or 2, bs, text_dim]
             text_emb_latent = self.emb_proj(text_emb)
         else:
             text_emb_latent = text_emb
