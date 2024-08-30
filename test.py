@@ -95,7 +95,7 @@ def main():
     else:
         target_model_class = VAE
 
-    dataset = get_dataset(cfg, phase="test")
+    dataset = get_dataset(cfg)
     test_dataloader = dataset.test_dataloader()
     model = target_model_class(cfg, dataset)
     model.to(device)

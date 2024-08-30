@@ -14,6 +14,6 @@ denoiser:
     position_embedding: 'learned'
     freq_shift: 0
     text_dim: 768
-    text_fusion_layers: 4
+    text_fusion_layers: 0
     time_dim: 768
     time_ff_dim: 3072

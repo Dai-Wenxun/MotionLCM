@@ -6,7 +6,7 @@ import torch.nn as nn
 
 class ResConv1DBlock(nn.Module):
     def __init__(self, n_in: int, n_state: int, dilation: int = 1, activation: str = 'silu', dropout: float = 0.2,
-                 norm: Optional[str] = None, norm_groups: int = 32, norm_eps: float = 1e-6) -> None:
+                 norm: Optional[str] = None, norm_groups: int = 32, norm_eps: float = 1e-6, time_dim: int = 512) -> None:
         super(ResConv1DBlock, self).__init__()
 
         self.norm = norm
@@ -31,10 +31,13 @@ class ResConv1DBlock(nn.Module):
             self.activation = nn.GELU()
 
         self.conv1 = nn.Conv1d(n_in, n_state, 3, 1, padding=dilation, dilation=dilation)
+        self.time_mlp = nn.Linear(time_dim, n_state)
+        nn.init.zeros_(self.time_mlp.weight)
+        nn.init.zeros_(self.time_mlp.bias)
         self.conv2 = nn.Conv1d(n_state, n_in, 1, 1, 0)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, time_embed: Optional[torch.Tensor] = None) -> torch.Tensor:
         x_orig = x
         if self.norm == "LN":
             x = self.norm1(x.transpose(-2, -1))
@@ -44,6 +47,9 @@ class ResConv1DBlock(nn.Module):
             x = self.activation(x)
 
         x = self.conv1(x)
+
+        if time_embed is not None:
+            x = x + self.time_mlp(time_embed).unsqueeze(-1)
 
         if self.norm == "LN":
             x = self.norm2(x.transpose(-2, -1))

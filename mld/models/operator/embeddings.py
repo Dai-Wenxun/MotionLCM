@@ -4,6 +4,8 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
+from .utils import get_activation_fn
+
 
 def get_timestep_embedding(
     timesteps: torch.Tensor,
@@ -41,27 +43,39 @@ def get_timestep_embedding(
 
 
 class TimestepEmbedding(nn.Module):
-    def __init__(self, channel: int, time_embed_dim: int, cond_proj_dim: Optional[int] = None) -> None:
-        super().__init__()
+    def __init__(self, in_channels: int, time_embed_dim: int, act_fn: str,
+                 out_dim: Optional[int] = None, post_act_fn: Optional[str] = None,
+                 cond_proj_dim: Optional[int] = None) -> None:
+        super(TimestepEmbedding, self).__init__()
 
-        # Distill CFG
+        self.linear_1 = nn.Linear(in_channels, time_embed_dim)
+
         if cond_proj_dim is not None:
-            self.cond_proj = nn.Linear(cond_proj_dim, channel, bias=False)
-            self.cond_proj.weight.data.fill_(0.0)
+            self.cond_proj = nn.Linear(cond_proj_dim, in_channels, bias=False)
         else:
             self.cond_proj = None
 
-        self.linear_1 = nn.Linear(channel, time_embed_dim)
-        self.act = nn.SiLU()
-        self.linear_2 = nn.Linear(time_embed_dim, time_embed_dim)
+        self.act = get_activation_fn(act_fn)
+
+        if out_dim is not None:
+            time_embed_dim_out = out_dim
+        else:
+            time_embed_dim_out = time_embed_dim
+        self.linear_2 = nn.Linear(time_embed_dim, time_embed_dim_out)
+
+        if post_act_fn is None:
+            self.post_act = None
+        else:
+            self.post_act = get_activation_fn(post_act_fn)
 
     def forward(self, sample: torch.Tensor, timestep_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
         if timestep_cond is not None:
             sample = sample + self.cond_proj(timestep_cond)
-
         sample = self.linear_1(sample)
         sample = self.act(sample)
         sample = self.linear_2(sample)
+        if self.post_act is not None:
+            sample = self.post_act(sample)
         return sample
 
 
