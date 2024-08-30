@@ -10,7 +10,7 @@ from mld.models.operator.attention import (SkipTransformerEncoder,
                                            TransformerEncoder,
                                            TransformerEncoderLayer)
 from mld.models.operator.conv import ResConv1DBlock
-from mld.models.operator.utils import get_clones
+from mld.models.operator.utils import get_clones, get_activation_fn, zero_module
 from mld.models.operator.position_encoding import build_position_encoding
 
 
@@ -18,7 +18,9 @@ class MldDenoiser(nn.Module):
 
     def __init__(self,
                  latent_dim: list = [1, 256],
-                 alpha: int = 1,
+                 hidden_dim: Optional[int] = None,
+                 text_dim: int = 768,
+                 time_dim: int = 768,
                  ff_size: int = 1024,
                  num_layers: int = 9,
                  num_heads: int = 4,
@@ -27,18 +29,21 @@ class MldDenoiser(nn.Module):
                  norm_eps: float = 1e-5,
                  activation: str = "gelu",
                  flip_sin_to_cos: bool = True,
+                 freq_shift: float = 0,
+                 time_act_fn: str = 'silu',
+                 time_post_act_fn: Optional[str] = None,
                  position_embedding: str = "learned",
                  arch: str = "trans_enc",
-                 freq_shift: float = 0,
-                 text_dim: int = 768,
-                 time_dim: int = 768,
+                 force_pre_post_proj: bool = False,
+                 text_act_fn: Optional[str] = None,
                  time_cond_proj_dim: Optional[int] = None,
                  is_controlnet: bool = False) -> None:
         super(MldDenoiser, self).__init__()
 
-        self.latent_dim = latent_dim[-1] * alpha
-        self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if alpha != 1 else nn.Identity()
-        self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if alpha != 1 else nn.Identity()
+        self.latent_dim = latent_dim[-1] if hidden_dim is None else hidden_dim
+        force_pre_post_proj = force_pre_post_proj or hidden_dim != latent_dim[-1]
+        self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if force_pre_post_proj else nn.Identity()
+        self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if force_pre_post_proj else nn.Identity()
 
         self.text_dim = text_dim
 
@@ -46,8 +51,11 @@ class MldDenoiser(nn.Module):
         self.time_cond_proj_dim = time_cond_proj_dim
 
         self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
-        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, cond_proj_dim=time_cond_proj_dim, act_fn='silu')
-        self.emb_proj = nn.Sequential(nn.ReLU(), nn.Linear(text_dim, self.latent_dim))
+        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, time_act_fn,
+                                                post_act_fn=time_post_act_fn, cond_proj_dim=time_cond_proj_dim)
+
+        text_act_fn = nn.Identity() if text_act_fn is None else get_activation_fn(text_act_fn)
+        self.emb_proj = nn.Sequential(text_act_fn, nn.Linear(text_dim, self.latent_dim))
 
         self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
 
@@ -67,13 +75,8 @@ class MldDenoiser(nn.Module):
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
 
+        # TODO
         self.is_controlnet = is_controlnet
-
-        def zero_module(module: nn.Module) -> nn.Module:
-            for p in module.parameters():
-                nn.init.zeros_(p)
-            return module
-
         if self.is_controlnet:
             self.controlnet_cond_embedding = nn.Sequential(
                 nn.Linear(self.latent_dim, self.latent_dim),
