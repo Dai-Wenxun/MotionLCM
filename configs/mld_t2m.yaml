@@ -61,10 +61,10 @@ DATASET:
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
   PADDING_TO_MAX: false
-  WINDOW_SIZE: None
+  WINDOW_SIZE: null
 
 METRIC:
-  DIST_SYNC_ON_STEP: True
+  DIST_SYNC_ON_STEP: true
   TYPE: ['TM2TMetrics']
 
 model:

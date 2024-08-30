@@ -45,8 +45,6 @@ class MldDenoiser(nn.Module):
         self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if force_pre_post_proj else nn.Identity()
         self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if force_pre_post_proj else nn.Identity()
 
-        self.text_dim = text_dim
-
         self.arch = arch
         self.time_cond_proj_dim = time_cond_proj_dim
 
