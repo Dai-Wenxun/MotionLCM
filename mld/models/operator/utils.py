@@ -26,3 +26,9 @@ def get_activation_fn(act_fn: str) -> nn.Module:
         return ACTIVATION_FUNCTIONS[act_fn]
     else:
         raise ValueError(f"Unsupported activation function: {act_fn}")
+
+
+def zero_module(module: nn.Module) -> nn.Module:
+    for p in module.parameters():
+        nn.init.zeros_(p)
+    return module

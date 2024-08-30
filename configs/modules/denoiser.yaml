@@ -1,7 +1,8 @@
 denoiser:
   target: mld.models.architectures.mld_denoiser.MldDenoiser
   params:
-    alpha: 1
+    latent_dim: ${model.latent_dim}
+    hidden_dim: None
     text_dim: 768
     time_dim: 768
     ff_size: 1024
@@ -12,7 +13,10 @@ denoiser:
     norm_eps: 1e-5
     activation: 'gelu'
     flip_sin_to_cos: true
+    freq_shift: 0
+    time_act_fn: 'silu'
+    time_post_act_fn: None
     position_embedding: 'learned'
     arch: 'trans_enc'
-    freq_shift: 0
-    latent_dim: ${model.latent_dim}
+    force_pre_post_proj: false
+    text_act_fn: 'relu'
