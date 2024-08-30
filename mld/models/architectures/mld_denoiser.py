@@ -35,6 +35,7 @@ class MldDenoiser(nn.Module):
                  position_embedding: str = "learned",
                  arch: str = "trans_enc",
                  force_pre_post_proj: bool = False,
+                 pre_post_act_fn: Optional[str] = None,
                  text_act_fn: Optional[str] = None,
                  time_cond_proj_dim: Optional[int] = None,
                  is_controlnet: bool = False) -> None:
@@ -42,8 +43,12 @@ class MldDenoiser(nn.Module):
 
         self.latent_dim = latent_dim[-1] if hidden_dim is None else hidden_dim
         force_pre_post_proj = force_pre_post_proj or hidden_dim != latent_dim[-1]
-        self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if force_pre_post_proj else nn.Identity()
-        self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if force_pre_post_proj else nn.Identity()
+        self.latent_pre = nn.Sequential(get_activation_fn(pre_post_act_fn),
+                                        nn.Linear(latent_dim[-1], self.latent_dim)) \
+            if force_pre_post_proj else nn.Identity()
+        self.latent_post = nn.Sequential(get_activation_fn(pre_post_act_fn),
+                                         nn.Linear(latent_dim[-1], self.latent_dim)) \
+            if force_pre_post_proj else nn.Identity()
 
         self.arch = arch
         self.time_cond_proj_dim = time_cond_proj_dim
@@ -51,12 +56,9 @@ class MldDenoiser(nn.Module):
         self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
         self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, time_act_fn,
                                                 post_act_fn=time_post_act_fn, cond_proj_dim=time_cond_proj_dim)
-
-        text_act_fn = nn.Identity() if text_act_fn is None else get_activation_fn(text_act_fn)
-        self.emb_proj = nn.Sequential(text_act_fn, nn.Linear(text_dim, self.latent_dim))
+        self.emb_proj = nn.Sequential(get_activation_fn(text_act_fn), nn.Linear(text_dim, self.latent_dim))
 
         self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
-
         if self.arch == "trans_enc":
             encoder_layer = TransformerEncoderLayer(
                 self.latent_dim,
