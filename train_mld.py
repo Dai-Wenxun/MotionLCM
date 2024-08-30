@@ -103,9 +103,7 @@ def main():
     # EMA
     model_ema = None
     if cfg.TRAIN.model_ema:
-        adjust = cfg.TRAIN.BATCH_SIZE / cfg.TRAIN.max_train_epochs * cfg.TRAIN.model_ema_steps
         alpha = 1.0 - cfg.TRAIN.model_ema_decay
-        alpha = min(1.0, alpha * adjust)
         logger.info(f'EMA alpha: {alpha}')
         model_ema = torch.optim.swa_utils.AveragedModel(model, device, lambda p0, p1, _: (1 - alpha) * p0 + alpha * p1)
 
