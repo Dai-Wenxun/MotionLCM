@@ -31,12 +31,12 @@ TRAIN:
 
 VAL:
   BATCH_SIZE: 32
-  SPLIT: test
+  SPLIT: 'test'
   NUM_WORKERS: 12
 
 TEST:
-  SPLIT: test
   BATCH_SIZE: 1
+  SPLIT: 'test'
   NUM_WORKERS: 12
 
   CHECKPOINTS: 'experiments_t2m/mld_humanml/mld_humanml.ckpt'
