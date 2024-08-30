@@ -19,4 +19,5 @@ denoiser:
     position_embedding: 'learned'
     arch: 'trans_enc'
     force_pre_post_proj: false
+    pre_post_act_fn: null
     text_act_fn: 'relu'

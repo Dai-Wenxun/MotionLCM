@@ -1,4 +1,5 @@
 import copy
+from typing import Optional
 
 import torch.nn as nn
 
@@ -8,7 +9,7 @@ ACTIVATION_FUNCTIONS = {
     "silu": nn.SiLU(),
     "mish": nn.Mish(),
     "gelu": nn.GELU(),
-    "relu": nn.ReLU(),
+    "relu": nn.ReLU()
 }
 
 
@@ -20,7 +21,9 @@ def get_clones(module: nn.Module, N: int) -> nn.ModuleList:
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
-def get_activation_fn(act_fn: str) -> nn.Module:
+def get_activation_fn(act_fn: Optional[str] = None) -> nn.Module:
+    if act_fn is None:
+        return nn.Identity()
     act_fn = act_fn.lower()
     if act_fn in ACTIVATION_FUNCTIONS:
         return ACTIVATION_FUNCTIONS[act_fn]
