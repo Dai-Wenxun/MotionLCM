@@ -5,14 +5,14 @@ NAME: 'mld_v2_humanml'
 
 TRAIN:
   BATCH_SIZE: 64
-  SPLIT: 'train'
+  SPLIT: 'train_sub'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
   SEED_VALUE: 1234
   PRETRAINED: '/home/wenxun/Motion/MotionLCM/experiments_recons/vae_v2_humanml/checkpoint-345600-fid-0.012.ckpt'
 
   validation_steps: -1
-  validation_epochs: 1
+  validation_epochs: 5
   checkpointing_steps: -1
   checkpointing_epochs: 50
   max_train_steps: -1
@@ -31,16 +31,15 @@ TRAIN:
 
 VAL:
   BATCH_SIZE: 32
-  SPLIT: test
+  SPLIT: 'train_sub'
   NUM_WORKERS: 12
 
 TEST:
-  DATASET:
-  SPLIT: test
-  BATCH_SIZE: 1
+  SPLIT: 'train'
+  BATCH_SIZE: 64
   NUM_WORKERS: 12
 
-  CHECKPOINTS: 'experiments_t2m/mld_humanml/mld_humanml.ckpt'
+  CHECKPOINTS: '/home/wenxun/Motion/MotionLCM/experiments_t2m/mld_v2_humanml/2024-08-29T16-59-59/checkpoints/checkpoint-23040-fid-6.585.ckpt'
 
   # Testing Args
   REPLICATION_TIMES: 20
@@ -69,7 +68,7 @@ METRIC:
   TYPE: ['TM2TMetrics']
 
 model:
-  target: ['motion_vae', 'text_encoder', 'denoiser_v2', 'scheduler_ddim']
+  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_ddim']
   latent_dim: [4, 256]
   guidance_scale: 7.5
   guidance_uncondp: 0.1

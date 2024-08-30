@@ -1,9 +1,10 @@
-import copy
 from typing import Optional, Callable
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
+
+from .utils import get_clone, get_clones, get_activation_fn
 
 
 class SkipTransformerEncoder(nn.Module):
@@ -369,20 +370,3 @@ class TransformerDecoderLayer(nn.Module):
         if self.normalize_before:
             return self.forward_pre(tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
         return self.forward_post(tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
-
-
-def get_clone(module: nn.Module) -> nn.Module:
-    return copy.deepcopy(module)
-
-
-def get_clones(module: nn.Module, N: int) -> nn.ModuleList:
-    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
-
-
-def get_activation_fn(activation: str) -> Callable:
-    """Return an activation function given a string"""
-    if activation == "relu":
-        return F.relu
-    if activation == "gelu":
-        return F.gelu
-    raise RuntimeError(F"activation should be relu/gelu, not {activation}.")

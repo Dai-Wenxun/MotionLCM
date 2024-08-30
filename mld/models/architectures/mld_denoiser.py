@@ -3,13 +3,14 @@ from typing import Optional, Union
 import torch
 import torch.nn as nn
 
-from mld.models.architectures.tools.embeddings import TimestepEmbedding, Timesteps
+from mld.models.operator.embeddings import TimestepEmbedding, Timesteps
 from mld.models.operator.attention import (SkipTransformerEncoder,
                                            TransformerDecoder,
                                            TransformerDecoderLayer,
                                            TransformerEncoder,
                                            TransformerEncoderLayer)
-from mld.models.operator.attention import get_clones
+from mld.models.operator.conv import ResConv1DBlock
+from mld.models.operator.utils import get_clones
 from mld.models.operator.position_encoding import build_position_encoding
 
 
@@ -45,7 +46,7 @@ class MldDenoiser(nn.Module):
         self.time_cond_proj_dim = time_cond_proj_dim
 
         self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
-        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, cond_proj_dim=time_cond_proj_dim)
+        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, cond_proj_dim=time_cond_proj_dim, act_fn='silu')
         self.emb_proj = nn.Sequential(nn.ReLU(), nn.Linear(text_dim, self.latent_dim))
 
         self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
@@ -61,7 +62,7 @@ class MldDenoiser(nn.Module):
                 norm_eps
             )
             encoder_norm = None if is_controlnet else nn.LayerNorm(self.latent_dim, eps=norm_eps)
-            self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
+            self.encoder = TransformerEncoder(encoder_layer, num_layers, encoder_norm,
                                                   return_intermediate=is_controlnet)
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
@@ -154,8 +155,7 @@ class MldDenoiserV2(nn.Module):
                  freq_shift: float = 0,
                  text_dim: int = 768,
                  text_fusion_layers: int = 4,
-                 time_dim: int = 768,
-                 time_ff_dim: int = 3072,
+                 time_embedding_dim: Optional[int] = None,
                  time_cond_proj_dim: Optional[int] = None,
                  **kwargs) -> None:
         super(MldDenoiserV2, self).__init__()
@@ -191,17 +191,19 @@ class MldDenoiserV2(nn.Module):
             norm_eps
         )
 
-        time_mlp = nn.Sequential(nn.Mish(), nn.Linear(time_dim, self.latent_dim * 2))
-        nn.init.zeros_(time_mlp[1].weight)
-        nn.init.zeros_(time_mlp[1].bias)
+        time_embed_dim = time_embedding_dim or self.latent_dim * 4
+
+        res_layer = ResConv1DBlock(
+            self.latent_dim, self.latent_dim, activation=activation, dropout=dropout,
+            norm='GN', time_dim=time_embed_dim
+        )
 
         self.layers_dec = get_clones(decoder_layer, num_layers)
-        self.layers_mlp = get_clones(time_mlp, num_layers)
+        self.layers_mlp = get_clones(res_layer, num_layers)
 
-        self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
-        self.time_embedding = nn.Sequential(
-            nn.Linear(time_dim, time_ff_dim), nn.Mish(),
-            nn.Linear(time_ff_dim, time_dim))
+        self.time_proj = Timesteps(self.latent_dim, flip_sin_to_cos, freq_shift)
+        self.time_embedding = TimestepEmbedding(
+            self.latent_dim, time_embed_dim, act_fn=activation, cond_proj_dim=time_cond_proj_dim)
 
     def forward(self,
                 sample: torch.Tensor,
@@ -214,7 +216,7 @@ class MldDenoiserV2(nn.Module):
         time_emb = self.time_proj(timesteps)
         time_emb = time_emb.to(dtype=sample.dtype)
         # [1, bs, latent_dim] <= [bs, latent_dim]
-        time_emb = self.time_embedding(time_emb).unsqueeze(0)
+        time_emb = self.time_embedding(time_emb)
 
         encoder_hidden_states = self.embed_text(encoder_hidden_states)
         for layer in self.textTransEncoder:
@@ -223,10 +225,12 @@ class MldDenoiserV2(nn.Module):
         encoder_hidden_states = encoder_hidden_states.permute(1, 0, 2)
 
         sample = self.query_pos(sample)
-        for decoder_layer, time_mlp in zip(self.layers_dec, self.layers_mlp):
-            time_emb_mlp = time_mlp(time_emb)
-            scale, shift = time_emb_mlp.chunk(2, dim=-1)
-            sample = sample * (1 + scale) + shift
+        for decoder_layer, res_layer in zip(self.layers_dec, self.layers_mlp):
+            sample = sample.permute(1, 2, 0)
+            sample = res_layer(sample, time_emb)
+            sample = sample.permute(2, 0, 1)
+            # scale, shift = time_emb_mlp.chunk(2, dim=-1)
+            # sample = sample * (1 + scale) + shift
             sample = decoder_layer(sample, encoder_hidden_states)
 
         sample = self.latent_post(sample)
