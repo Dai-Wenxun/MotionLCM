@@ -42,13 +42,13 @@ class MldDenoiser(nn.Module):
         super(MldDenoiser, self).__init__()
 
         self.latent_dim = latent_dim[-1] if hidden_dim is None else hidden_dim
-        force_pre_post_proj = force_pre_post_proj or hidden_dim != latent_dim[-1]
+        add_pre_post_proj = force_pre_post_proj or (hidden_dim is not None and hidden_dim != latent_dim[-1])
         self.latent_pre = nn.Sequential(get_activation_fn(pre_post_act_fn),
                                         nn.Linear(latent_dim[-1], self.latent_dim)) \
-            if force_pre_post_proj else nn.Identity()
+            if add_pre_post_proj else nn.Identity()
         self.latent_post = nn.Sequential(get_activation_fn(pre_post_act_fn),
                                          nn.Linear(latent_dim[-1], self.latent_dim)) \
-            if force_pre_post_proj else nn.Identity()
+            if add_pre_post_proj else nn.Identity()
 
         self.arch = arch
         self.time_cond_proj_dim = time_cond_proj_dim
