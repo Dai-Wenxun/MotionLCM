@@ -62,7 +62,7 @@ class MldDenoiser(nn.Module):
                 norm_eps
             )
             encoder_norm = None if is_controlnet else nn.LayerNorm(self.latent_dim, eps=norm_eps)
-            self.encoder = TransformerEncoder(encoder_layer, num_layers, encoder_norm,
+            self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
                                                   return_intermediate=is_controlnet)
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
