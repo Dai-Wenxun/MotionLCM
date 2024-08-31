@@ -35,20 +35,15 @@ class MldDenoiser(nn.Module):
                  position_embedding: str = "learned",
                  arch: str = "trans_enc",
                  force_pre_post_proj: bool = False,
-                 pre_post_act_fn: Optional[str] = None,
-                 text_act_fn: Optional[str] = None,
+                 text_act_fn: str = 'relu',
                  time_cond_proj_dim: Optional[int] = None,
                  is_controlnet: bool = False) -> None:
         super(MldDenoiser, self).__init__()
 
         self.latent_dim = latent_dim[-1] if hidden_dim is None else hidden_dim
         add_pre_post_proj = force_pre_post_proj or (hidden_dim is not None and hidden_dim != latent_dim[-1])
-        self.latent_pre = nn.Sequential(get_activation_fn(pre_post_act_fn),
-                                        nn.Linear(latent_dim[-1], self.latent_dim)) \
-            if add_pre_post_proj else nn.Identity()
-        self.latent_post = nn.Sequential(get_activation_fn(pre_post_act_fn),
-                                         nn.Linear(latent_dim[-1], self.latent_dim)) \
-            if add_pre_post_proj else nn.Identity()
+        self.latent_pre = nn.Linear(latent_dim[-1], self.latent_dim) if add_pre_post_proj else nn.Identity()
+        self.latent_post = nn.Linear(self.latent_dim, latent_dim[-1]) if add_pre_post_proj else nn.Identity()
 
         self.arch = arch
         self.time_cond_proj_dim = time_cond_proj_dim
