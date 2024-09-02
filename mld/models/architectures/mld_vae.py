@@ -30,6 +30,8 @@ class MldVae(nn.Module):
                  normalize_before: bool = False,
                  norm_eps: float = 1e-5,
                  activation: str = "gelu",
+                 norm_post: bool = True,
+                 activation_post: Optional[str] = None,
                  position_embedding: str = "learned") -> None:
         super(MldVae, self).__init__()
 
@@ -49,12 +51,12 @@ class MldVae(nn.Module):
             normalize_before,
             norm_eps
         )
-        encoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps)
-        self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm)
+        encoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post else None
+        self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm, activation_post)
 
         if self.arch == "all_encoder":
-            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps)
-            self.decoder = SkipTransformerEncoder(encoder_layer, num_layers, decoder_norm)
+            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post else None
+            self.decoder = SkipTransformerEncoder(encoder_layer, num_layers, decoder_norm, activation_post)
         elif self.arch == 'encoder_decoder':
             self.query_pos_decoder = build_position_encoding(
                 self.latent_dim, position_embedding=position_embedding)
@@ -68,8 +70,8 @@ class MldVae(nn.Module):
                 normalize_before,
                 norm_eps
             )
-            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps)
-            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm)
+            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post else None
+            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm, activation_post)
         else:
             raise ValueError(f"Not support architecture: {self.arch}!")
 

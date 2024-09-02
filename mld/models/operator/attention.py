@@ -1,4 +1,4 @@
-from typing import Optional, Callable
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -8,11 +8,14 @@ from .utils import get_clone, get_clones, get_activation_fn
 
 
 class SkipTransformerEncoder(nn.Module):
-    def __init__(self, encoder_layer: nn.Module, num_layers: int, return_intermediate: bool = False) -> None:
+    def __init__(self, encoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
+                 act: Optional[str] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.d_model = encoder_layer.d_model
 
         self.num_layers = num_layers
+        self.norm = norm
+        self.act = get_activation_fn(act)
         self.return_intermediate = return_intermediate
         assert num_layers % 2 == 1
 
@@ -70,6 +73,9 @@ class SkipTransformerEncoder(nn.Module):
             if self.return_intermediate:
                 intermediate.append(x)
 
+        if self.norm:
+            x = self.act(self.norm(x))
+
         if self.return_intermediate:
             return torch.stack(intermediate)
 
@@ -77,11 +83,14 @@ class SkipTransformerEncoder(nn.Module):
 
 
 class SkipTransformerDecoder(nn.Module):
-    def __init__(self, decoder_layer: nn.Module, num_layers: int, return_intermediate: bool = False) -> None:
+    def __init__(self, decoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
+                 act: Optional[str] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.d_model = decoder_layer.d_model
 
         self.num_layers = num_layers
+        self.norm = norm
+        self.act = get_activation_fn(act)
         self.return_intermediate = return_intermediate
         assert num_layers % 2 == 1
 
@@ -152,6 +161,9 @@ class SkipTransformerDecoder(nn.Module):
             if self.return_intermediate:
                 intermediate.append(x)
 
+        if self.norm:
+            x = self.act(self.norm(x))
+
         if self.return_intermediate:
             return torch.stack(intermediate)
 
@@ -160,11 +172,14 @@ class SkipTransformerDecoder(nn.Module):
 
 class TransformerEncoder(nn.Module):
 
-    def __init__(self, encoder_layer: nn.Module, num_layers: int, return_intermediate: bool = False) -> None:
+    def __init__(self, encoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
+                 act: Optional[str] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.layers = get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
         self.return_intermediate = return_intermediate
+        self.norm = norm
+        self.act = get_activation_fn(act)
 
     def forward(self, src: torch.Tensor,
                 mask: Optional[torch.Tensor] = None,
@@ -183,6 +198,9 @@ class TransformerEncoder(nn.Module):
             if self.return_intermediate:
                 intermediate.append(output)
 
+        if self.norm:
+            output = self.act(self.norm(output))
+
         if self.return_intermediate:
             return torch.stack(intermediate)
 
@@ -191,11 +209,14 @@ class TransformerEncoder(nn.Module):
 
 class TransformerDecoder(nn.Module):
 
-    def __init__(self, decoder_layer: nn.Module, num_layers: int, return_intermediate: bool = False) -> None:
+    def __init__(self, decoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
+                 act: Optional[str] = None, return_intermediate: bool = False) -> None:
         super().__init__()
         self.layers = get_clones(decoder_layer, num_layers)
         self.num_layers = num_layers
         self.return_intermediate = return_intermediate
+        self.norm = norm
+        self.act = get_activation_fn(act)
 
     def forward(self,
                 tgt: torch.Tensor,
@@ -220,6 +241,9 @@ class TransformerDecoder(nn.Module):
 
             if self.return_intermediate:
                 intermediate.append(output)
+
+        if self.norm:
+            output = self.act(self.norm(output))
 
         if self.return_intermediate:
             return torch.stack(intermediate)
