@@ -28,6 +28,8 @@ class MldDenoiser(nn.Module):
                  normalize_before: bool = False,
                  norm_eps: float = 1e-5,
                  activation: str = "gelu",
+                 norm_post: bool = True,
+                 activation_post: Optional[str] = None,
                  flip_sin_to_cos: bool = True,
                  freq_shift: float = 0,
                  time_act_fn: str = 'silu',
@@ -64,11 +66,12 @@ class MldDenoiser(nn.Module):
                 normalize_before,
                 norm_eps
             )
-            encoder_norm = None if is_controlnet else nn.LayerNorm(self.latent_dim, eps=norm_eps)
-            self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
-                                                  return_intermediate=is_controlnet)
+            self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, return_intermediate=is_controlnet)
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
+
+        self.norm_post = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post and not is_controlnet else None
+        self.act_post = get_activation_fn(activation_post)
 
         # TODO
         self.is_controlnet = is_controlnet
@@ -131,6 +134,10 @@ class MldDenoiser(nn.Module):
             raise TypeError(f"{self.arch} is not supported")
 
         # 5. dimension matching (post)
+        if self.norm_post:
+            sample = self.norm_post(sample)
+            sample = self.act_post(sample)
+
         sample = self.latent_post(sample)
         sample = sample.permute(1, 0, 2)
         return sample

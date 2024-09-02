@@ -12,6 +12,8 @@ denoiser:
     normalize_before: false
     norm_eps: 1e-5
     activation: 'gelu'
+    norm_post: true
+    activation_post: null
     flip_sin_to_cos: true
     freq_shift: 0
     time_act_fn: 'silu'
