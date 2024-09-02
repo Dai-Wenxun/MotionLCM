@@ -9,7 +9,6 @@ ACTIVATION_FUNCTIONS = {
     "silu": nn.SiLU(),
     "mish": nn.Mish(),
     "gelu": nn.GELU(),
-    "geglu": nn.GELU(),
     "relu": nn.ReLU()
 }
 
