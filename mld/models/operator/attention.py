@@ -257,7 +257,9 @@ class TransformerEncoderLayer(nn.Module):
                  activation: str = "relu", normalize_before: bool = False, norm_eps: float = 1e-5) -> None:
         super(TransformerEncoderLayer, self).__init__()
         self.d_model = d_model
-        self.activation = activation
+        self.activation_name = activation
+        self.normalize_before = normalize_before
+
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         self.linear1 = nn.Linear(d_model, dim_feedforward if activation != 'geglu' else dim_feedforward * 2)
         self.activation = get_activation_fn(activation) if activation != 'geglu' else nn.GELU()
@@ -269,8 +271,6 @@ class TransformerEncoderLayer(nn.Module):
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
 
-        self.normalize_before = normalize_before
-
     def forward_post(self,
                      src: torch.Tensor,
                      src_mask: Optional[torch.Tensor] = None,
@@ -278,7 +278,7 @@ class TransformerEncoderLayer(nn.Module):
         src2 = self.self_attn(src, src, value=src, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
         src = self.norm1(src)
-        if self.activation == 'geglu':
+        if self.activation_name == 'geglu':
             src2, gate = self.linear1(src).chunk(2, dim=-1)
             src2 = src2 * self.activation(gate)
         else:
@@ -296,7 +296,7 @@ class TransformerEncoderLayer(nn.Module):
         src2 = self.self_attn(src2, src2, value=src2, attn_mask=src_mask, key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
         src2 = self.norm2(src)
-        if self.activation == 'geglu':
+        if self.activation_name == 'geglu':
             src2, gate = self.linear1(src2).chunk(2, dim=-1)
             src2 = src2 * self.activation(gate)
         else:
@@ -319,10 +319,14 @@ class TransformerDecoderLayer(nn.Module):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation: str = "relu", normalize_before: bool = False, norm_eps: float = 1e-5) -> None:
         super(TransformerDecoderLayer, self).__init__()
+        self.d_model = d_model
+        self.activation_name = activation
+        self.normalize_before = normalize_before
+
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        self.d_model = d_model
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
+        self.linear1 = nn.Linear(d_model, dim_feedforward if activation != 'geglu' else dim_feedforward * 2)
+        self.activation = get_activation_fn(activation) if activation != 'geglu' else nn.GELU()
         self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
@@ -332,9 +336,6 @@ class TransformerDecoderLayer(nn.Module):
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.dropout3 = nn.Dropout(dropout)
-
-        self.activation = get_activation_fn(activation)
-        self.normalize_before = normalize_before
 
     def forward_post(self,
                      tgt: torch.Tensor,
@@ -350,7 +351,7 @@ class TransformerDecoderLayer(nn.Module):
                                    key_padding_mask=memory_key_padding_mask)[0]
         tgt = tgt + self.dropout2(tgt2)
         tgt = self.norm2(tgt)
-        if self.activation == 'geglu':
+        if self.activation_name == 'geglu':
             tgt2, gate = self.linear1(tgt).chunk(2, dim=-1)
             tgt2 = tgt2 * self.activation(gate)
         else:
@@ -376,7 +377,7 @@ class TransformerDecoderLayer(nn.Module):
                                    key_padding_mask=memory_key_padding_mask)[0]
         tgt = tgt + self.dropout2(tgt2)
         tgt2 = self.norm3(tgt)
-        if self.activation == 'geglu':
+        if self.activation_name == 'geglu':
             tgt2, gate = self.linear1(tgt2).chunk(2, dim=-1)
             tgt2 = tgt2 * self.activation(gate)
         else:
