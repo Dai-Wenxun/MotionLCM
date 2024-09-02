@@ -235,8 +235,8 @@ class TransformerEncoderLayer(nn.Module):
         self.d_model = d_model
         self.activation = activation
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        self.linear1 = nn.Linear(d_model, dim_feedforward * 2 if activation == 'geglu' else dim_feedforward)
-        self.activation = get_activation_fn(activation)
+        self.linear1 = nn.Linear(d_model, dim_feedforward if activation != 'geglu' else dim_feedforward * 2)
+        self.activation = get_activation_fn(activation) if activation != 'geglu' else nn.GELU()
         self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
