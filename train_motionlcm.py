@@ -21,6 +21,7 @@ from mld.config import parse_args, instantiate_from_config
 from mld.data.get_data import get_dataset
 from mld.models.modeltype.mld import MLD
 from mld.utils.utils import print_table, set_seed, move_batch_to_device
+from mld.utils.temos_utils import lengths_to_mask
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -268,8 +269,9 @@ def main():
 
             # Encode motions to latents
             with torch.no_grad():
-                latents, _ = vae.encode(feats_ref, lengths)
-                latents = latents.permute(1, 0, 2)
+                padding_to_max_length = feats_ref.shape[1] if cfg.DATASET.PADDING_TO_MAX else None
+                mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
+                latents, _ = vae.encode(feats_ref, mask)
 
             prompt_embeds = text_encoder(text)
 
@@ -278,7 +280,7 @@ def main():
             bsz = latents.shape[0]
 
             # Sample a random timestep for each image t_n ~ U[0, N - k - 1] without bias.
-            topk = noise_scheduler.config.num_train_timesteps // cfg.TRAIN.num_ddim_timesteps
+            topk = scheduler.config.num_train_timesteps // cfg.TRAIN.num_ddim_timesteps
             index = torch.randint(0, cfg.TRAIN.num_ddim_timesteps, (bsz,), device=latents.device).long()
             start_timesteps = solver.ddim_timesteps[index]
             timesteps = start_timesteps - topk
@@ -292,7 +294,7 @@ def main():
 
             # Add noise to the latents according to the noise magnitude at each timestep
             # (this is the forward diffusion process) [z_{t_{n + k}} in Algorithm 1]
-            noisy_model_input = noise_scheduler.add_noise(latents, noise, start_timesteps)
+            noisy_model_input = scheduler.add_noise(latents, noise, start_timesteps)
 
             # Sample a random guidance scale w from U[w_min, w_max] and embed it
             w = (cfg.TRAIN.w_max - cfg.TRAIN.w_min) * torch.rand((bsz,)) + cfg.TRAIN.w_min
@@ -313,7 +315,7 @@ def main():
                 noise_pred,
                 start_timesteps,
                 noisy_model_input,
-                noise_scheduler.config.prediction_type,
+                scheduler.config.prediction_type,
                 alpha_schedule,
                 sigma_schedule)
 
@@ -331,7 +333,7 @@ def main():
                     cond_teacher_output,
                     start_timesteps,
                     noisy_model_input,
-                    noise_scheduler.config.prediction_type,
+                    scheduler.config.prediction_type,
                     alpha_schedule,
                     sigma_schedule)
 
@@ -344,7 +346,7 @@ def main():
                     uncond_teacher_output,
                     start_timesteps,
                     noisy_model_input,
-                    noise_scheduler.config.prediction_type,
+                    scheduler.config.prediction_type,
                     alpha_schedule,
                     sigma_schedule)
 
@@ -364,7 +366,7 @@ def main():
                     target_noise_pred,
                     timesteps,
                     x_prev,
-                    noise_scheduler.config.prediction_type,
+                    scheduler.config.prediction_type,
                     alpha_schedule,
                     sigma_schedule)
                 target = c_skip * x_prev + c_out * pred_x_0
