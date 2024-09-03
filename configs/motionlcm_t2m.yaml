@@ -4,7 +4,6 @@ TEST_FOLDER: './experiments_t2m_test'
 NAME: 'motionlcm_humanml'
 
 TRAIN:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 256
   SPLIT: 'train'
   NUM_WORKERS: 8
@@ -37,13 +36,11 @@ TRAIN:
   ema_decay: 0.95
 
 VAL:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
 TEST:
-  DATASET: 'humanml3d'
   BATCH_SIZE: 1
   SPLIT: 'test'
   NUM_WORKERS: 12
@@ -58,6 +55,7 @@ TEST:
   DIVERSITY_TIMES: 300
 
 DATASET:
+  NAME: 'humanml3d'
   SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
@@ -68,6 +66,8 @@ DATASET:
     MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
+  PADDING_TO_MAX: false
+  WINDOW_SIZE: null
 
 METRIC:
   DIST_SYNC_ON_STEP: true
