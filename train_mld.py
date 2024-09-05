@@ -158,7 +158,7 @@ def main():
             progress_bar.update(1)
             global_step += 1
 
-            if model_ema and global_step % cfg.TRAIN.model_ema_steps == 0:
+            if cfg.TRAIN.model_ema and global_step % cfg.TRAIN.model_ema_steps == 0:
                 model_ema.update_parameters(model)
 
             if global_step % cfg.TRAIN.checkpointing_steps == 0:
