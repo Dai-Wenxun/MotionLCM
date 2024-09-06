@@ -5,6 +5,7 @@ import torch.nn as nn
 
 from mld.models.operator.embeddings import TimestepEmbedding, Timesteps
 from mld.models.operator.attention import (SkipTransformerEncoder,
+                                           SkipTransformerDecoder,
                                            TransformerDecoder,
                                            TransformerDecoderLayer,
                                            TransformerEncoder,
@@ -36,6 +37,7 @@ class MldDenoiser(nn.Module):
                  time_post_act_fn: Optional[str] = None,
                  position_embedding: str = "learned",
                  arch: str = "trans_enc",
+                 add_mem_pos: bool = True,
                  force_pre_post_proj: bool = False,
                  text_act_fn: str = 'relu',
                  time_cond_proj_dim: Optional[int] = None,
@@ -68,6 +70,24 @@ class MldDenoiser(nn.Module):
             )
             encoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post and not is_controlnet else None
             self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
+                                                  activation_post, return_intermediate=is_controlnet)
+
+        elif self.arch == 'trans_dec':
+            if add_mem_pos:
+                self.mem_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
+            else:
+                self.mem_pos = None
+            decoder_layer = TransformerDecoderLayer(
+                self.latent_dim,
+                num_heads,
+                ff_size,
+                dropout,
+                activation,
+                normalize_before,
+                norm_eps
+            )
+            decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post and not is_controlnet else None
+            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm,
                                                   activation_post, return_intermediate=is_controlnet)
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
@@ -120,15 +140,24 @@ class MldDenoiser(nn.Module):
             xseq = torch.cat((sample, emb_latent), axis=0)
             xseq = self.query_pos(xseq)
             tokens = self.encoder(xseq, controlnet_residuals=controlnet_residuals)
+        elif self.arch == 'trans_dec':
+            sample = self.query_pos(sample)
+            if self.mem_pos:
+                emb_latent = self.mem_pos(emb_latent)
+            tokens = self.decoder(sample, emb_latent, controlnet_residuals=controlnet_residuals)
+        else:
+            raise TypeError(f"{self.arch} is not supported")
 
-            if self.is_controlnet:
-                control_res_samples = []
-                for res, block in zip(tokens, self.controlnet_down_mid_blocks):
-                    r = block(res)
-                    control_res_samples.append(r)
-                return control_res_samples
-
+        if self.is_controlnet:
+            control_res_samples = []
+            for res, block in zip(tokens, self.controlnet_down_mid_blocks):
+                r = block(res)
+                control_res_samples.append(r)
+            return control_res_samples
+        elif self.arch == "trans_enc":
             sample = tokens[:sample.shape[0]]
+        elif self.arch == 'trans_dec':
+            sample = tokens
         else:
             raise TypeError(f"{self.arch} is not supported")
 

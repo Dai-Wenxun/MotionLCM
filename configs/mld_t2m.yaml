@@ -9,7 +9,7 @@ TRAIN:
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
   SEED_VALUE: 1234
-  PRETRAINED: ''
+  PRETRAINED: 'experiments_recons/vae_humanml/vae_humanml.ckpt'
 
   validation_steps: -1
   validation_epochs: 50
