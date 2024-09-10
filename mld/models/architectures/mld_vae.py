@@ -133,8 +133,9 @@ class MldVae(nn.Module):
 class MldVaeV2(nn.Module):
     def __init__(self,
                  nfeats: int,
+                 hidden_dim: int,
                  latent_dim: int,
-                 down_t: int = 2,
+                 down_t: int = 3,
                  stride_t: int = 2,
                  n_depth: int = 3,
                  dilation_growth_rate: int = 3,
@@ -142,18 +143,18 @@ class MldVaeV2(nn.Module):
                  dropout: float = 0.2,
                  norm: Optional[str] = None,
                  norm_groups: int = 32,
-                 norm_eps: float = 1e-6,
+                 norm_eps: float = 1e-5,
                  clip_range: Optional[tuple[int]] = None) -> None:
         super(MldVaeV2, self).__init__()
         self.down_t = down_t
         self.stride_t = stride_t
         self.clip_range = clip_range
 
-        self.encoder = ResEncoder(nfeats, latent_dim, latent_dim, down_t, stride_t,
+        self.encoder = ResEncoder(nfeats, hidden_dim, latent_dim, down_t, stride_t,
                                   n_depth, dilation_growth_rate, activation=activation,
                                   dropout=dropout, norm=norm, norm_groups=norm_groups,
                                   norm_eps=norm_eps, double_z=True)
-        self.decoder = ResDecoder(nfeats, latent_dim, latent_dim, down_t, n_depth,
+        self.decoder = ResDecoder(nfeats, hidden_dim, latent_dim, down_t, n_depth,
                                   dilation_growth_rate, activation=activation, dropout=dropout,
                                   norm=norm, norm_groups=norm_groups, norm_eps=norm_eps)
 

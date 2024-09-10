@@ -2,14 +2,15 @@ motion_vae:
   target: mld.models.architectures.mld_vae.MldVaeV2
   params:
     nfeats: ${DATASET.NFEATS}
-    latent_dim: ${model.latent_dim}
-    down_t: 4
+    hidden_dim: 256
+    latent_dim: 4
+    down_t: 3
     stride_t: 2
     n_depth: 3
     dilation_growth_rate: 3
     activation: 'relu'
-    dropout: 0.2
-    norm: None
+    dropout: 0.1
+    norm: null
     norm_groups: 32
-    norm_eps: 1e-6
-    clip_range: [-30.0, 20.0]
+    norm_eps: 1e-5
+    clip_range: null
