@@ -2,9 +2,9 @@ motion_vae:
   target: mld.models.architectures.mld_vae.MldVaeV2
   params:
     nfeats: ${DATASET.NFEATS}
-    hidden_dim: 256
+    hidden_dim: 512
     latent_dim: 4
-    down_t: 3
+    down_t: 2
     stride_t: 2
     n_depth: 3
     dilation_growth_rate: 3
