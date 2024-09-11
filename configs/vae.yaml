@@ -36,7 +36,7 @@ TEST:
   SPLIT: 'test'
   NUM_WORKERS: 12
 
-  CHECKPOINTS: '/home/wenxun/Motion/MotionLCM/experiments_recons/vae_v2_humanml/checkpoint-345600-fid-0.012.ckpt'
+  CHECKPOINTS: ''
 
   # Testing Args
   REPLICATION_TIMES: 20
