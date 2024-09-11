@@ -158,7 +158,7 @@ class VAE(BaseModel):
         feats_ref = feats_ref[align_idx]
         feats_rst = feats_rst[align_idx]
         m_lens = m_lens[align_idx]
-        m_lens = torch.div(m_lens, self.cfg.DATASET.HUMANML3D.UNIT_LEN,
+        m_lens = torch.div(m_lens, eval(f"self.cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.UNIT_LEN"),
                            rounding_mode="floor")
 
         recons_mov = self.t2m_moveencoder(feats_rst[..., :-4]).detach()
