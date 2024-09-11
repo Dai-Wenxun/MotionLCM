@@ -130,6 +130,7 @@ def main():
                 writer.add_scalar(mk, mv, global_step=global_step)
             elif cfg.vis == "swanlab":
                 writer.log({mk: mv}, step=global_step)
+
         model.vae.train()
         return max_val_mpjpe, min_val_fid
 
