@@ -64,7 +64,7 @@ METRIC:
 
 model:
   target: ['motion_vae_v2']
-  latent_dim: 512
+  latent_dim: 4
 
   # VAE Args
   rec_feats_ratio: 1.0
