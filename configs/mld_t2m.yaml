@@ -73,6 +73,7 @@ model:
   guidance_scale: 7.5
   guidance_uncondp: 0.1
   is_controlnet: false
+  vae_scale_factor: 1.0
 
   t2m_textencoder:
     dim_word: 300
