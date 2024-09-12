@@ -314,20 +314,26 @@ class MLD(BaseModel):
 
         if self.denoiser.time_cond_proj_dim is not None:
             # LCM
-            model_pred = n_set['model_pred']
-            target = n_set['model_gt']
-            # Performance comparison: l2 loss > huber loss
+            model_pred = n_set['sample_pred']
+            target = n_set['sample_gt']
+            # Performance comparison: l2 loss > huber loss when training controlnet
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
         else:
             # DM
-            model_pred = n_set['noise_pred']
-            target = n_set['noise']
+            if self.scheduler.config.prediction_type == "epsilon":
+                model_pred = n_set['noise_pred']
+                target = n_set['noise']
+            elif self.scheduler.config.prediction_type == "sample":
+                model_pred = n_set['sample_pred']
+                target = n_set['sample_gt']
+            else:
+                raise ValueError(f"Invalid prediction_type {self.scheduler.config.prediction_type}.")
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
 
         loss_dict['diff_loss'] = diff_loss
 
         if self.is_controlnet and self.vaeloss:
-            z_pred = n_set['model_pred'] / self.cfg.model.vae_scale_factor
+            z_pred = n_set['sample_pred'] / self.cfg.model.vae_scale_factor
             feats_rst = self.vae.decode(z_pred.transpose(0, 1), lengths)
             joints_rst = self.feats2joints(feats_rst)
             joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], -1)
