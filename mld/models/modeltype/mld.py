@@ -37,6 +37,8 @@ class MLD(BaseModel):
         self.denoiser = instantiate_from_config(cfg.model.denoiser)
 
         self.scheduler = instantiate_from_config(cfg.model.scheduler)
+        self.alphas = torch.sqrt(self.scheduler.alphas_cumprod)
+        self.sigmas = torch.sqrt(1 - self.scheduler.alphas_cumprod)
 
         self._get_t2m_evaluator(cfg)
 
@@ -45,9 +47,8 @@ class MLD(BaseModel):
 
         self.feats2joints = datamodule.feats2joints
 
-        self.alphas = torch.sqrt(self.scheduler.alphas_cumprod)
-        self.sigmas = torch.sqrt(1 - self.scheduler.alphas_cumprod)
-        self.l2_loss = lambda a, b: (a - b) ** 2
+        logger.info(f"vae_scale_factor: {self.cfg.model.vae_scale_factor}")
+        logger.info(f"prediction_type: {self.scheduler.config.prediction_type}")
 
         self.is_controlnet = cfg.model.is_controlnet
         if self.is_controlnet:
@@ -109,6 +110,7 @@ class MLD(BaseModel):
         z = self._diffusion_reverse(text_emb, hint)
 
         with torch.no_grad():
+            z = z / self.cfg.model.vae_scale_factor
             feats_rst = self.vae.decode(z, lengths)
         joints = self.feats2joints(feats_rst.detach().cpu())
         joints = remove_padding(joints, lengths)
@@ -121,13 +123,22 @@ class MLD(BaseModel):
 
         return joints, joints_ref
 
-    def predicted_origin(self, model_output, timesteps, sample):
+    def predicted_origin(self, model_output: torch.Tensor, timesteps: torch.Tensor, sample: torch.Tensor) -> tuple:
         self.alphas = self.alphas.to(model_output.device)
         self.sigmas = self.sigmas.to(model_output.device)
-        sigmas = extract_into_tensor(self.sigmas, timesteps, sample.shape)
         alphas = extract_into_tensor(self.alphas, timesteps, sample.shape)
-        pred_x_0 = (sample - sigmas * model_output) / alphas
-        return pred_x_0
+        sigmas = extract_into_tensor(self.sigmas, timesteps, sample.shape)
+
+        if self.scheduler.config.prediction_type == "epsilon":
+            pred_original_sample = (sample - sigmas * model_output) / alphas
+            pred_epsilon = model_output
+        elif self.scheduler.config.prediction_type == "sample":
+            pred_original_sample = model_output
+            pred_epsilon = (sample - alphas * model_output) / sigmas
+        else:
+            raise ValueError(f"Invalid prediction_type {self.scheduler.config.prediction_type}.")
+
+        return pred_original_sample, pred_epsilon
 
     def _diffusion_reverse(self, encoder_hidden_states: torch.Tensor, hint: torch.Tensor = None) -> torch.Tensor:
 
@@ -249,26 +260,26 @@ class MLD(BaseModel):
                 encoder_hidden_states=encoder_hidden_states,
                 controlnet_cond=controlnet_cond)
 
-        # Predict the noise residual
-        noise_pred = self.denoiser(
+        model_output = self.denoiser(
             sample=noisy_latents,
             timestep=timesteps,
             timestep_cond=timestep_cond,
             encoder_hidden_states=encoder_hidden_states,
             controlnet_residuals=controlnet_residuals)
 
-        model_pred = self.predicted_origin(noise_pred, timesteps, noisy_latents)
+        sample_pred, noise_pred = self.predicted_origin(model_output, timesteps, noisy_latents)
 
         n_set = {
             "noise": noise,
             "noise_pred": noise_pred,
-            "model_pred": model_pred,
-            "model_gt": latents
+            "sample_pred": sample_pred,
+            "sample_gt": latents
         }
         return n_set
 
-    def masked_l2(self, a: torch.Tensor, b: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        loss = self.l2_loss(a, b)
+    @staticmethod
+    def masked_l2(a: torch.Tensor, b: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        loss = F.mse_loss(a, b, reduction='none')
         loss = sum_flat(loss * mask.float())
         n_entries = a.shape[-1]
         non_zero_elements = sum_flat(mask) * n_entries
@@ -284,6 +295,7 @@ class MLD(BaseModel):
             padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
             mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
             z, dist = self.vae.encode(feats_ref, mask)
+            z = z * self.cfg.model.vae_scale_factor
 
         text = batch["text"]
         # classifier free guidance: randomly drop text during training
@@ -315,7 +327,7 @@ class MLD(BaseModel):
         loss_dict['diff_loss'] = diff_loss
 
         if self.is_controlnet and self.vaeloss:
-            z_pred = n_set['model_pred']
+            z_pred = n_set['model_pred'] / self.cfg.model.vae_scale_factor
             feats_rst = self.vae.decode(z_pred.transpose(0, 1), lengths)
             joints_rst = self.feats2joints(feats_rst)
             joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], -1)
@@ -327,10 +339,10 @@ class MLD(BaseModel):
 
             if self.cond_ratio != 0:
                 if self.vaeloss_type == 'mean':
-                    cond_loss = (self.l2_loss(joints_rst, hint) * mask_hint).mean()
+                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none') * mask_hint).mean()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
                 elif self.vaeloss_type == 'sum':
-                    cond_loss = (self.l2_loss(joints_rst, hint).sum(-1, keepdims=True) * mask_hint).sum() / mask_hint.sum()
+                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none').sum(-1, keepdims=True) * mask_hint).sum() / mask_hint.sum()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
                 elif self.vaeloss_type == 'mask':
                     cond_loss = self.masked_l2(joints_rst, hint, mask_hint)
@@ -343,10 +355,10 @@ class MLD(BaseModel):
             if self.rot_ratio != 0:
                 mask_rot = lengths_to_mask(lengths, feats_rst.device).unsqueeze(-1)
                 if self.vaeloss_type == 'mean':
-                    rot_loss = (self.l2_loss(feats_rst, feats_ref) * mask_rot).mean()
+                    rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none') * mask_rot).mean()
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
                 elif self.vaeloss_type == 'sum':
-                    rot_loss = (self.l2_loss(feats_rst, feats_ref).sum(-1, keepdims=True) * mask_rot).sum() / mask_rot.sum()
+                    rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none').sum(-1, keepdims=True) * mask_rot).sum() / mask_rot.sum()
                     rot_loss = rot_loss / self.nfeats
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
                 elif self.vaeloss_type == 'mask':
@@ -400,6 +412,7 @@ class MLD(BaseModel):
         with torch.no_grad():
             padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
             mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
+            z = z / self.cfg.model.vae_scale_factor
             vae_st = time.time()
             feats_rst = self.vae.decode(z, mask)
             vae_et = time.time()

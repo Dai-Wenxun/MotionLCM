@@ -7,6 +7,7 @@ scheduler:
     beta_start: 0.00085
     beta_end: 0.012
     beta_schedule: 'scaled_linear'
+    prediction_type: 'epsilon'
     clip_sample: false
     # below are for ddim
     set_alpha_to_one: false
