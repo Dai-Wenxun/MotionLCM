@@ -191,7 +191,7 @@ class MLD(BaseModel):
                 else:
                     controlnet_prompt_embeds = encoder_hidden_states
 
-                controlnet_residuals = self.controlnet(
+                controlnet_residuals, _ = self.controlnet(
                     latents,
                     t,
                     timestep_cond=timestep_cond,
@@ -205,7 +205,7 @@ class MLD(BaseModel):
                     controlnet_residuals = [d * self.control_scale for d in controlnet_residuals]
 
             # predict the noise residual
-            noise_pred = self.denoiser(
+            model_output, _ = self.denoiser(
                 sample=latent_model_input,
                 timestep=t,
                 timestep_cond=timestep_cond,
@@ -214,10 +214,10 @@ class MLD(BaseModel):
 
             # perform guidance
             if self.do_classifier_free_guidance:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
+                model_output_uncond, model_output_text = model_output.chunk(2)
+                model_output = model_output_uncond + self.guidance_scale * (model_output_text - model_output_uncond)
 
-            latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+            latents = self.scheduler.step(model_output, t, latents, **extra_step_kwargs).prev_sample
 
         return latents
 
