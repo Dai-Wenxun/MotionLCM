@@ -126,6 +126,8 @@ def main():
             val_loss_list.append(val_loss_dict)
         metrics = target_model.allsplit_epoch_end()
         metrics[f"Val/loss"] = sum([d['loss'] for d in val_loss_list]).item() / len(val_dataloader)
+        metrics[f"Val/diff_loss"] = sum([d['diff_loss'] for d in val_loss_list]).item() / len(val_dataloader)
+        metrics[f"Val/router_loss"] = sum([d['router_loss'] for d in val_loss_list]).item() / len(val_dataloader)
         max_val_rp1 = metrics['Metrics/R_precision_top_1']
         min_val_fid = metrics['Metrics/FID']
         print_table(f'Validation@Step-{global_step}', metrics)
