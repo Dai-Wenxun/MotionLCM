@@ -10,9 +10,23 @@ from mld.models.operator.attention import (SkipTransformerEncoder,
                                            TransformerDecoderLayer,
                                            TransformerEncoder,
                                            TransformerEncoderLayer)
+from mld.models.operator.moe import MoeTransformerEncoderLayer, MoeTransformerDecoderLayer
 from mld.models.operator.conv import ResConv1DBlock
 from mld.models.operator.utils import get_clones, get_activation_fn, zero_module
 from mld.models.operator.position_encoding import build_position_encoding
+
+
+def load_balancing_loss_func(router_logits: tuple, num_experts: int, topk: int, device: torch.device) -> torch.Tensor:
+    if router_logits is None:
+        return torch.tensor(0., device=device)
+    router_logits = torch.cat(router_logits, dim=0)
+    routing_weights = torch.nn.functional.softmax(router_logits, dim=-1)
+    _, selected_experts = torch.topk(routing_weights, topk, dim=-1)
+    expert_mask = torch.nn.functional.one_hot(selected_experts, num_experts)
+    tokens_per_expert = torch.mean(expert_mask.float(), dim=0)
+    router_prob_per_expert = torch.mean(routing_weights, dim=0)
+    overall_loss = torch.sum(tokens_per_expert * router_prob_per_expert.unsqueeze(0))
+    return overall_loss * num_experts
 
 
 class MldDenoiser(nn.Module):
@@ -40,6 +54,11 @@ class MldDenoiser(nn.Module):
                  add_mem_pos: bool = True,
                  force_pre_post_proj: bool = False,
                  text_act_fn: str = 'relu',
+                 moe: bool = False,
+                 moe_num_experts: int = 4,
+                 moe_topk: int = 2,
+                 moe_loss_weight: float = 1e-2,
+                 moe_jitter_noise: Optional[float] = None,
                  time_cond_proj_dim: Optional[int] = None,
                  is_controlnet: bool = False) -> None:
         super(MldDenoiser, self).__init__()
@@ -52,6 +71,10 @@ class MldDenoiser(nn.Module):
         self.arch = arch
         self.time_cond_proj_dim = time_cond_proj_dim
 
+        self.moe_num_experts = moe_num_experts
+        self.moe_topk = moe_topk
+        self.moe_loss_weight = moe_loss_weight
+
         self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
         self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, time_act_fn,
                                                 post_act_fn=time_post_act_fn, cond_proj_dim=time_cond_proj_dim)
@@ -59,36 +82,36 @@ class MldDenoiser(nn.Module):
 
         self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
         if self.arch == "trans_enc":
-            encoder_layer = TransformerEncoderLayer(
-                self.latent_dim,
-                num_heads,
-                ff_size,
-                dropout,
-                activation,
-                normalize_before,
-                norm_eps
-            )
+            if moe:
+                encoder_layer = MoeTransformerEncoderLayer(
+                    self.latent_dim, num_heads, moe_num_experts, moe_topk, ff_size,
+                    dropout, activation, normalize_before, norm_eps, moe_jitter_noise)
+            else:
+                encoder_layer = TransformerEncoderLayer(
+                    self.latent_dim, num_heads, ff_size, dropout,
+                    activation, normalize_before, norm_eps)
+
             encoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post and not is_controlnet else None
-            self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm,
-                                                  activation_post, return_intermediate=is_controlnet)
+            self.encoder = SkipTransformerEncoder(encoder_layer, num_layers, encoder_norm, activation_post,
+                                                  is_controlnet=is_controlnet, is_moe=moe)
 
         elif self.arch == 'trans_dec':
             if add_mem_pos:
                 self.mem_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
             else:
                 self.mem_pos = None
-            decoder_layer = TransformerDecoderLayer(
-                self.latent_dim,
-                num_heads,
-                ff_size,
-                dropout,
-                activation,
-                normalize_before,
-                norm_eps
-            )
+            if moe:
+                decoder_layer = MoeTransformerDecoderLayer(
+                    self.latent_dim, num_heads, moe_num_experts, moe_topk, ff_size,
+                    dropout, activation, normalize_before, norm_eps, moe_jitter_noise)
+            else:
+                decoder_layer = TransformerDecoderLayer(
+                    self.latent_dim, num_heads, ff_size, dropout,
+                    activation, normalize_before, norm_eps)
+
             decoder_norm = nn.LayerNorm(self.latent_dim, eps=norm_eps) if norm_post and not is_controlnet else None
-            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm,
-                                                  activation_post, return_intermediate=is_controlnet)
+            self.decoder = SkipTransformerDecoder(decoder_layer, num_layers, decoder_norm, activation_post,
+                                                  is_controlnet=is_controlnet, is_moe=moe)
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
 
@@ -111,7 +134,7 @@ class MldDenoiser(nn.Module):
                 timestep_cond: Optional[torch.Tensor] = None,
                 controlnet_cond: Optional[torch.Tensor] = None,
                 controlnet_residuals: Optional[list[torch.Tensor]] = None
-                ) -> Union[torch.Tensor, list[torch.Tensor]]:
+                ) -> tuple:
         # 0. dimension matching (pre)
         sample = sample.permute(1, 0, 2)
         sample = self.latent_pre(sample)
@@ -139,21 +162,23 @@ class MldDenoiser(nn.Module):
         if self.arch == "trans_enc":
             xseq = torch.cat((sample, emb_latent), axis=0)
             xseq = self.query_pos(xseq)
-            tokens = self.encoder(xseq, controlnet_residuals=controlnet_residuals)
+            tokens, intermediates, router_logits = self.encoder(xseq, controlnet_residuals=controlnet_residuals)
         elif self.arch == 'trans_dec':
             sample = self.query_pos(sample)
             if self.mem_pos:
                 emb_latent = self.mem_pos(emb_latent)
-            tokens = self.decoder(sample, emb_latent, controlnet_residuals=controlnet_residuals)
+            tokens, intermediates, router_logits = self.decoder(sample, emb_latent, controlnet_residuals=controlnet_residuals)
         else:
             raise TypeError(f"{self.arch} is not supported")
 
+        router_loss = load_balancing_loss_func(router_logits, self.moe_num_experts, self.moe_topk, device=sample.device)
+
         if self.is_controlnet:
             control_res_samples = []
-            for res, block in zip(tokens, self.controlnet_down_mid_blocks):
+            for res, block in zip(intermediates, self.controlnet_down_mid_blocks):
                 r = block(res)
                 control_res_samples.append(r)
-            return control_res_samples
+            return control_res_samples, router_loss
         elif self.arch == "trans_enc":
             sample = tokens[:sample.shape[0]]
         elif self.arch == 'trans_dec':
@@ -164,7 +189,7 @@ class MldDenoiser(nn.Module):
         # 5. dimension matching (post)
         sample = self.latent_post(sample)
         sample = sample.permute(1, 0, 2)
-        return sample
+        return sample, router_loss
 
 
 class MldDenoiserV2(nn.Module):

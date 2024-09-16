@@ -260,7 +260,7 @@ class MLD(BaseModel):
                 encoder_hidden_states=encoder_hidden_states,
                 controlnet_cond=controlnet_cond)
 
-        model_output = self.denoiser(
+        model_output, router_loss = self.denoiser(
             sample=noisy_latents,
             timestep=timesteps,
             timestep_cond=timestep_cond,
@@ -273,7 +273,8 @@ class MLD(BaseModel):
             "noise": noise,
             "noise_pred": noise_pred,
             "sample_pred": sample_pred,
-            "sample_gt": latents
+            "sample_gt": latents,
+            "router_loss": router_loss
         }
         return n_set
 
@@ -331,6 +332,7 @@ class MLD(BaseModel):
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
 
         loss_dict['diff_loss'] = diff_loss
+        loss_dict['router_loss'] = n_set['router_loss']
 
         if self.is_controlnet and self.vaeloss:
             z_pred = n_set['sample_pred'] / self.cfg.model.vae_scale_factor

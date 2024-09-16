@@ -148,7 +148,9 @@ def main():
             batch = move_batch_to_device(batch, device)
             loss_dict = model.allsplit_step('train', batch)
 
-            loss = loss_dict['diff_loss']
+            diff_loss = loss_dict['diff_loss']
+            router_loss = loss_dict['router_loss']
+            loss = loss_dict['loss']
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.denoiser.parameters(), cfg.TRAIN.max_grad_norm)
             optimizer.step()
@@ -198,7 +200,10 @@ def main():
                     torch.save(ckpt, save_path)
                     logger.info(f"Saved state to {save_path} with fid:{round(cur_fid, 3)}")
 
-            logs = {"loss": loss.item(), "lr": lr_scheduler.get_last_lr()[0]}
+            logs = {"loss": loss.item(),
+                    "diff_loss": diff_loss.item(),
+                    "router_loss": router_loss.item(),
+                    "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
             for k, v in logs.items():
                 if cfg.vis == "tb":

@@ -23,3 +23,8 @@ denoiser:
     add_mem_pos: true
     force_pre_post_proj: false
     text_act_fn: 'relu'
+    moe: false
+    moe_num_experts: 4
+    moe_topk: 2
+    moe_loss_weight: 1e-2
+    moe_jitter_noise: null

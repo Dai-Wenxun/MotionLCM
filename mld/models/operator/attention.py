@@ -3,20 +3,20 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-
 from .utils import get_clone, get_clones, get_activation_fn
 
 
 class SkipTransformerEncoder(nn.Module):
     def __init__(self, encoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
-                 act: Optional[str] = None, return_intermediate: bool = False) -> None:
+                 act: Optional[str] = None, is_controlnet: bool = False, is_moe: bool = False) -> None:
         super().__init__()
         self.d_model = encoder_layer.d_model
 
         self.num_layers = num_layers
         self.norm = norm
         self.act = get_activation_fn(act)
-        self.return_intermediate = return_intermediate
+        self.is_controlnet = is_controlnet
+        self.is_moe = is_moe
         assert num_layers % 2 == 1
 
         num_block = (num_layers - 1) // 2
@@ -32,66 +32,65 @@ class SkipTransformerEncoder(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    def maybe_controlnet_moe(
+            self, x: torch.Tensor, controlnet_residuals: Optional[list[torch.Tensor]] = None,
+            all_intermediates: Optional[tuple] = None, all_router_logits: Optional[tuple] = None
+    ) -> tuple:
+        if self.is_moe:
+            all_router_logits += (x[1],)
+            x = x[0]
+
+        if self.is_controlnet:
+            x = x + controlnet_residuals.pop()
+            all_intermediates += (x,)
+
+        return x, controlnet_residuals, all_intermediates, all_router_logits
+
     def forward(self, src: torch.Tensor,
                 mask: Optional[torch.Tensor] = None,
                 src_key_padding_mask: Optional[torch.Tensor] = None,
-                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> torch.Tensor:
+                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> tuple:
         x = src
-        intermediate = []
-        index = 0
         xs = []
+
+        all_intermediates = () if self.is_controlnet else None
+        all_router_logits = () if self.is_moe else None
+        controlnet_residuals.reverse() if self.is_controlnet else None
+
         for module in self.input_blocks:
             x = module(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
-
-            if controlnet_residuals is not None:
-                x = x + controlnet_residuals[index]
-                index += 1
-
+            x, controlnet_residuals, all_intermediates, all_router_logits = self.maybe_controlnet_moe(
+                x, controlnet_residuals, all_intermediates, all_router_logits)
             xs.append(x)
 
-            if self.return_intermediate:
-                intermediate.append(x)
-
         x = self.middle_block(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
-
-        if controlnet_residuals is not None:
-            x = x + controlnet_residuals[index]
-            index += 1
-
-        if self.return_intermediate:
-            intermediate.append(x)
+        x, controlnet_residuals, all_intermediates, all_router_logits = self.maybe_controlnet_moe(
+            x, controlnet_residuals, all_intermediates, all_router_logits)
 
         for (module, linear) in zip(self.output_blocks, self.linear_blocks):
             x = torch.cat([x, xs.pop()], dim=-1)
             x = linear(x)
             x = module(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
-
-            if controlnet_residuals is not None:
-                x = x + controlnet_residuals[index]
-                index += 1
-
-            if self.return_intermediate:
-                intermediate.append(x)
+            x, controlnet_residuals, all_intermediates, all_router_logits = self.maybe_controlnet_moe(
+                x, controlnet_residuals, all_intermediates, all_router_logits)
 
         if self.norm:
             x = self.act(self.norm(x))
 
-        if self.return_intermediate:
-            return torch.stack(intermediate)
-
-        return x
+        return x, all_intermediates, all_router_logits
 
 
 class SkipTransformerDecoder(nn.Module):
     def __init__(self, decoder_layer: nn.Module, num_layers: int, norm: Optional[nn.Module] = None,
-                 act: Optional[str] = None, return_intermediate: bool = False) -> None:
+                 act: Optional[str] = None, is_controlnet: bool = False, is_moe: bool = False) -> None:
         super().__init__()
         self.d_model = decoder_layer.d_model
 
         self.num_layers = num_layers
         self.norm = norm
         self.act = get_activation_fn(act)
-        self.return_intermediate = return_intermediate
+        self.is_controlnet = is_controlnet
+        self.is_moe = is_moe
         assert num_layers % 2 == 1
 
         num_block = (num_layers - 1) // 2
@@ -107,6 +106,20 @@ class SkipTransformerDecoder(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    def maybe_controlnet_moe(
+            self, x: torch.Tensor, controlnet_residuals: Optional[list[torch.Tensor]] = None,
+            all_intermediates: Optional[tuple] = None, all_router_logits: Optional[tuple] = None
+    ) -> tuple:
+        if self.is_moe:
+            all_router_logits += (x[1],)
+            x = x[0]
+
+        if self.is_controlnet:
+            x = x + controlnet_residuals.pop()
+            all_intermediates += (x,)
+
+        return x, controlnet_residuals, all_intermediates, all_router_logits
+
     def forward(self,
                 tgt: torch.Tensor,
                 memory: torch.Tensor,
@@ -114,37 +127,29 @@ class SkipTransformerDecoder(nn.Module):
                 memory_mask: Optional[torch.Tensor] = None,
                 tgt_key_padding_mask: Optional[torch.Tensor] = None,
                 memory_key_padding_mask: Optional[torch.Tensor] = None,
-                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> torch.Tensor:
+                controlnet_residuals: Optional[list[torch.Tensor]] = None) -> tuple:
         x = tgt
-        intermediate = []
-        index = 0
         xs = []
+
+        all_intermediates = () if self.is_controlnet else None
+        all_router_logits = () if self.is_moe else None
+        controlnet_residuals.reverse() if self.is_controlnet else None
+
         for module in self.input_blocks:
             x = module(x, memory, tgt_mask=tgt_mask,
                        memory_mask=memory_mask,
                        tgt_key_padding_mask=tgt_key_padding_mask,
                        memory_key_padding_mask=memory_key_padding_mask)
-
-            if controlnet_residuals is not None:
-                x = x + controlnet_residuals[index]
-                index += 1
-
+            x, controlnet_residuals, all_intermediates, all_router_logits = self.maybe_controlnet_moe(
+                x, controlnet_residuals, all_intermediates, all_router_logits)
             xs.append(x)
-
-            if self.return_intermediate:
-                intermediate.append(x)
 
         x = self.middle_block(x, memory, tgt_mask=tgt_mask,
                               memory_mask=memory_mask,
                               tgt_key_padding_mask=tgt_key_padding_mask,
                               memory_key_padding_mask=memory_key_padding_mask)
-
-        if controlnet_residuals is not None:
-            x = x + controlnet_residuals[index]
-            index += 1
-
-        if self.return_intermediate:
-            intermediate.append(x)
+        x, controlnet_residuals, all_intermediates, all_router_logits = self.maybe_controlnet_moe(
+            x, controlnet_residuals, all_intermediates, all_router_logits)
 
         for (module, linear) in zip(self.output_blocks, self.linear_blocks):
             x = torch.cat([x, xs.pop()], dim=-1)
@@ -153,21 +158,13 @@ class SkipTransformerDecoder(nn.Module):
                        memory_mask=memory_mask,
                        tgt_key_padding_mask=tgt_key_padding_mask,
                        memory_key_padding_mask=memory_key_padding_mask)
-
-            if controlnet_residuals is not None:
-                x = x + controlnet_residuals[index]
-                index += 1
-
-            if self.return_intermediate:
-                intermediate.append(x)
+            x, controlnet_residuals, all_intermediates, all_router_logits = self.maybe_controlnet_moe(
+                x, controlnet_residuals, all_intermediates, all_router_logits)
 
         if self.norm:
             x = self.act(self.norm(x))
 
-        if self.return_intermediate:
-            return torch.stack(intermediate)
-
-        return x
+        return x, all_intermediates, all_router_logits
 
 
 class TransformerEncoder(nn.Module):
