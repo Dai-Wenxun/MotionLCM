@@ -38,7 +38,7 @@ class SparseMoeBlock(nn.Module):
         hidden_states = hidden_states.view(-1, hidden_dim)
         router_logits = self.gate(hidden_states)
         routing_weights = F.softmax(router_logits, dim=-1)
-        routing_weights, selected_experts = torch.topk(routing_weights, self.top_k, dim=-1)
+        routing_weights, selected_experts = torch.topk(routing_weights, self.topk, dim=-1)
         routing_weights /= routing_weights.sum(dim=-1, keepdim=True)
 
         final_hidden_states = torch.zeros(
