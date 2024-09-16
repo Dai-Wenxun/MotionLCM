@@ -94,7 +94,7 @@ class MldVae(nn.Module):
         xseq = torch.cat((dist, x), 0)
 
         xseq = self.query_pos_encoder(xseq)
-        dist = self.encoder(xseq, src_key_padding_mask=~aug_mask)[:dist.shape[0]]
+        dist = self.encoder(xseq, src_key_padding_mask=~aug_mask)[0][:dist.shape[0]]
 
         mu = dist[0:self.latent_size, ...]
         logvar = dist[self.latent_size:, ...]
@@ -117,10 +117,10 @@ class MldVae(nn.Module):
             z_mask = torch.ones((bs, self.latent_size), dtype=torch.bool, device=z.device)
             aug_mask = torch.cat((z_mask, mask), axis=1)
             xseq = self.query_pos_decoder(xseq)
-            output = self.decoder(xseq, src_key_padding_mask=~aug_mask)[z.shape[0]:]
+            output = self.decoder(xseq, src_key_padding_mask=~aug_mask)[0][z.shape[0]:]
         elif self.arch == "encoder_decoder":
             queries = self.query_pos_decoder(queries)
-            output = self.decoder(tgt=queries, memory=z, tgt_key_padding_mask=~mask)
+            output = self.decoder(tgt=queries, memory=z, tgt_key_padding_mask=~mask)[0]
         else:
             raise ValueError(f"Not support architecture: {self.arch}!")
 
