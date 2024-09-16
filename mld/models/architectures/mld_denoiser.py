@@ -172,6 +172,7 @@ class MldDenoiser(nn.Module):
             raise TypeError(f"{self.arch} is not supported")
 
         router_loss = load_balancing_loss_func(router_logits, self.moe_num_experts, self.moe_topk, device=sample.device)
+        router_loss = self.moe_loss_weight * router_loss
 
         if self.is_controlnet:
             control_res_samples = []
