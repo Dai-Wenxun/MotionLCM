@@ -191,12 +191,12 @@ class MLD(BaseModel):
                 else:
                     controlnet_prompt_embeds = encoder_hidden_states
 
-                controlnet_residuals, _ = self.controlnet(
+                controlnet_residuals = self.controlnet(
                     latents,
                     t,
                     timestep_cond=timestep_cond,
                     encoder_hidden_states=controlnet_prompt_embeds,
-                    controlnet_cond=controlnet_cond)
+                    controlnet_cond=controlnet_cond)[0]
 
                 if self.do_classifier_free_guidance:
                     controlnet_residuals = [torch.cat([torch.zeros_like(d), d * self.control_scale], dim=1)
@@ -205,12 +205,12 @@ class MLD(BaseModel):
                     controlnet_residuals = [d * self.control_scale for d in controlnet_residuals]
 
             # predict the noise residual
-            model_output, _ = self.denoiser(
+            model_output = self.denoiser(
                 sample=latent_model_input,
                 timestep=t,
                 timestep_cond=timestep_cond,
                 encoder_hidden_states=encoder_hidden_states,
-                controlnet_residuals=controlnet_residuals)
+                controlnet_residuals=controlnet_residuals)[0]
 
             # perform guidance
             if self.do_classifier_free_guidance:
@@ -252,8 +252,9 @@ class MLD(BaseModel):
         noisy_latents = self.scheduler.add_noise(latents.clone(), noise, timesteps)
 
         controlnet_residuals = None
+        router_loss_controlnet = None
         if self.is_controlnet:
-            controlnet_residuals = self.controlnet(
+            controlnet_residuals, router_loss_controlnet = self.controlnet(
                 sample=noisy_latents,
                 timestep=timesteps,
                 timestep_cond=timestep_cond,
@@ -267,14 +268,14 @@ class MLD(BaseModel):
             encoder_hidden_states=encoder_hidden_states,
             controlnet_residuals=controlnet_residuals)
 
-        sample_pred, noise_pred = self.predicted_origin(model_output, timesteps, noisy_latents)
+        latents_pred, noise_pred = self.predicted_origin(model_output, timesteps, noisy_latents)
 
         n_set = {
             "noise": noise,
             "noise_pred": noise_pred,
-            "sample_pred": sample_pred,
+            "sample_pred": latents_pred,
             "sample_gt": latents,
-            "router_loss": router_loss
+            "router_loss": router_loss_controlnet if self.is_controlnet else router_loss
         }
         return n_set
 
@@ -317,7 +318,7 @@ class MLD(BaseModel):
             # LCM
             model_pred = n_set['sample_pred']
             target = n_set['sample_gt']
-            # Performance comparison: l2 loss > huber loss when training controlnet
+            # Performance comparison: l2 loss > huber loss when training controlnet for LCM
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
         else:
             # DM
@@ -332,7 +333,11 @@ class MLD(BaseModel):
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
 
         loss_dict['diff_loss'] = diff_loss
-        loss_dict['router_loss'] = n_set['router_loss']
+
+        if n_set['router_loss'] is not None:
+            loss_dict['router_loss'] = n_set['router_loss']
+        else:
+            loss_dict['router_loss'] = torch.tensor(0., device=diff_loss.device)
 
         if self.is_controlnet and self.vaeloss:
             z_pred = n_set['sample_pred'] / self.cfg.model.vae_scale_factor

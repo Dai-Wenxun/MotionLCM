@@ -40,8 +40,10 @@ class SkipTransformerEncoder(nn.Module):
             all_router_logits += (x[1],)
             x = x[0]
 
-        if self.is_controlnet:
+        if controlnet_residuals is not None:
             x = x + controlnet_residuals.pop()
+
+        if self.is_controlnet:
             all_intermediates += (x,)
 
         return x, controlnet_residuals, all_intermediates, all_router_logits
@@ -55,7 +57,8 @@ class SkipTransformerEncoder(nn.Module):
 
         all_intermediates = () if self.is_controlnet else None
         all_router_logits = () if self.is_moe else None
-        controlnet_residuals.reverse() if self.is_controlnet else None
+        if controlnet_residuals is not None:
+            controlnet_residuals.reverse()
 
         for module in self.input_blocks:
             x = module(x, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
@@ -133,7 +136,8 @@ class SkipTransformerDecoder(nn.Module):
 
         all_intermediates = () if self.is_controlnet else None
         all_router_logits = () if self.is_moe else None
-        controlnet_residuals.reverse() if self.is_controlnet else None
+        if controlnet_residuals is not None:
+            controlnet_residuals.reverse()
 
         for module in self.input_blocks:
             x = module(x, memory, tgt_mask=tgt_mask,

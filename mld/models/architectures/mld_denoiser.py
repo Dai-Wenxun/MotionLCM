@@ -16,17 +16,15 @@ from mld.models.operator.utils import get_clones, get_activation_fn, zero_module
 from mld.models.operator.position_encoding import build_position_encoding
 
 
-def load_balancing_loss_func(router_logits: tuple, num_experts: int, topk: int, device: torch.device) -> torch.Tensor:
-    if router_logits is None:
-        return torch.tensor(0., device=device)
+def load_balancing_loss_func(router_logits: tuple, num_experts: int = 4, topk: int = 2):
     router_logits = torch.cat(router_logits, dim=0)
     routing_weights = torch.nn.functional.softmax(router_logits, dim=-1)
     _, selected_experts = torch.topk(routing_weights, topk, dim=-1)
     expert_mask = torch.nn.functional.one_hot(selected_experts, num_experts)
     tokens_per_expert = torch.mean(expert_mask.float(), dim=0)
     router_prob_per_expert = torch.mean(routing_weights, dim=0)
-    overall_loss = torch.sum(tokens_per_expert * router_prob_per_expert.unsqueeze(0))
-    return overall_loss * num_experts
+    overall_loss = num_experts * torch.sum(tokens_per_expert * router_prob_per_expert.unsqueeze(0))
+    return overall_loss
 
 
 class MldDenoiser(nn.Module):
@@ -167,12 +165,15 @@ class MldDenoiser(nn.Module):
             sample = self.query_pos(sample)
             if self.mem_pos:
                 emb_latent = self.mem_pos(emb_latent)
-            tokens, intermediates, router_logits = self.decoder(sample, emb_latent, controlnet_residuals=controlnet_residuals)
+            tokens, intermediates, router_logits = self.decoder(sample, emb_latent,
+                                                                controlnet_residuals=controlnet_residuals)
         else:
             raise TypeError(f"{self.arch} is not supported")
 
-        router_loss = load_balancing_loss_func(router_logits, self.moe_num_experts, self.moe_topk, device=sample.device)
-        router_loss = self.moe_loss_weight * router_loss
+        router_loss = None
+        if router_logits is not None:
+            router_loss = load_balancing_loss_func(router_logits, self.moe_num_experts, self.moe_topk)
+            router_loss = self.moe_loss_weight * router_loss
 
         if self.is_controlnet:
             control_res_samples = []
