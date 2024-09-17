@@ -31,7 +31,7 @@ class SparseMoeBlock(nn.Module):
         self.experts = get_clones(SparseMoeMLP(d_model, dim_feedforward, dropout, activation), num_experts)
 
     def forward(self, hidden_states: torch.Tensor) -> tuple:
-        batch_size, sequence_length, hidden_dim = hidden_states.shape
+        sequence_length, batch_size, hidden_dim = hidden_states.shape
         if self.training and self.jitter_noise is not None:
             hidden_states *= torch.empty_like(hidden_states).uniform_(1.0 - self.jitter_noise, 1.0 + self.jitter_noise)
 
@@ -51,7 +51,7 @@ class SparseMoeBlock(nn.Module):
             current_state = hidden_states[top_x]
             current_hidden_states = expert_layer(current_state) * routing_weights[top_x, idx, None]
             final_hidden_states.index_add_(0, top_x, current_hidden_states)
-        final_hidden_states = final_hidden_states.reshape(batch_size, sequence_length, hidden_dim)
+        final_hidden_states = final_hidden_states.reshape(sequence_length, batch_size, hidden_dim)
         return final_hidden_states, router_logits
 
 
