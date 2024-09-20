@@ -96,8 +96,8 @@ class VAE(BaseModel):
             loss_dict['rec_feats_loss'] = rec_feats_loss * self.rec_feats_ratio
 
         if self.rec_joints_ratio > 0:
-            joints_rst = self.feats2joints(feats_rst)
-            joints_ref = self.feats2joints(feats_ref)
+            joints_rst = self.feats2joints(feats_rst).reshape(mask.size(0), mask.size(1), -1)
+            joints_ref = self.feats2joints(feats_ref).reshape(mask.size(0), mask.size(1), -1)
             rec_joints_loss = self.loss_calculate(joints_ref, joints_rst, self.rec_joints_loss, mask)
             loss_dict['rec_joints_loss'] = rec_joints_loss * self.rec_joints_ratio
 
