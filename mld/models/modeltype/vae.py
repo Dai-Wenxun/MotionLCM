@@ -119,7 +119,7 @@ class VAE(BaseModel):
         return loss_dict
 
     def t2m_eval(self, batch: dict) -> dict:
-        feats_ref = batch["motion"]
+        feats_ref_ori = batch["motion"]
         lengths = batch["length"]
         word_embs = batch["word_embs"]
         pos_ohot = batch["pos_ohot"]
@@ -128,14 +128,14 @@ class VAE(BaseModel):
         start = time.time()
 
         vae_st_e = time.time()
-        padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-        mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
-        z, dist_m = self.vae.encode(feats_ref, mask)
+        padding_to_max_length = feats_ref_ori.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+        mask = lengths_to_mask(lengths, feats_ref_ori.device, max_len=padding_to_max_length)
+        z, dist_m = self.vae.encode(feats_ref_ori, mask)
         vae_et_e = time.time()
         self.vae_encode_times.append(vae_et_e - vae_st_e)
 
         vae_st_d = time.time()
-        feats_rst = self.vae.decode(z, mask)
+        feats_rst_ori = self.vae.decode(z, mask)
         vae_et_d = time.time()
         self.vae_decode_times.append(vae_et_d - vae_st_d)
 
@@ -144,12 +144,12 @@ class VAE(BaseModel):
         self.frames.extend(lengths)
 
         # joints recover
-        joints_rst = self.feats2joints(feats_rst)
-        joints_ref = self.feats2joints(feats_ref)
+        joints_rst = self.feats2joints(feats_rst_ori)
+        joints_ref = self.feats2joints(feats_ref_ori)
 
         # renorm for t2m evaluators
-        feats_rst = self.datamodule.renorm4t2m(feats_rst)
-        feats_ref = self.datamodule.renorm4t2m(feats_ref)
+        feats_rst = self.datamodule.renorm4t2m(feats_rst_ori)
+        feats_ref = self.datamodule.renorm4t2m(feats_ref_ori)
 
         # t2m motion encoder
         m_lens = lengths.copy()
@@ -172,6 +172,8 @@ class VAE(BaseModel):
         rs_set = {
             "m_ref": feats_ref,
             "m_rst": feats_rst,
+            "m_ref_ori": feats_ref_ori,
+            "m_rst_ori": feats_rst_ori,
             "lat_t": text_emb,
             "lat_m": gt_emb,
             "lat_rm": recons_emb,
@@ -194,6 +196,8 @@ class VAE(BaseModel):
                 elif metric == "PosMetrics":
                     getattr(self, metric).update(rs_set["joints_ref"],
                                                  rs_set["joints_rst"],
+                                                 rs_set["m_ref_ori"],
+                                                 rs_set["m_rst_ori"],
                                                  batch["length"])
                 else:
                     raise TypeError(f"Not support this metric {metric}.")
