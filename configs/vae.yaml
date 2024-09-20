@@ -67,8 +67,8 @@ model:
 
   # VAE Args
   rec_feats_ratio: 1.0
-  rec_joints_ratio: 0.0
-  rec_velocity_ratio: 0.5
+  rec_joints_ratio: 1.0
+  rec_velocity_ratio: 0.0
   kl_ratio: 1e-4
 
   rec_feats_loss: 'l1_smooth'
