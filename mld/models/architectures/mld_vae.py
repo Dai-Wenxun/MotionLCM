@@ -22,6 +22,8 @@ class MldVae(nn.Module):
     def __init__(self,
                  nfeats: int,
                  latent_dim: list = [1, 256],
+                 hidden_dim: Optional[int] = None,
+                 force_pre_post_proj: bool = False,
                  ff_size: int = 1024,
                  num_layers: int = 9,
                  num_heads: int = 4,
@@ -36,7 +38,11 @@ class MldVae(nn.Module):
         super(MldVae, self).__init__()
 
         self.latent_size = latent_dim[0]
-        self.latent_dim = latent_dim[-1]
+        self.latent_dim = latent_dim[-1] if hidden_dim is None else hidden_dim
+        add_pre_post_proj = force_pre_post_proj or (hidden_dim is not None and hidden_dim != latent_dim[-1])
+        self.latent_pre = nn.Linear(self.latent_dim, latent_dim[-1]) if add_pre_post_proj else nn.Identity()
+        self.latent_post = nn.Linear(latent_dim[-1], self.latent_dim) if add_pre_post_proj else nn.Identity()
+
         self.arch = arch
 
         self.query_pos_encoder = build_position_encoding(
@@ -95,6 +101,7 @@ class MldVae(nn.Module):
 
         xseq = self.query_pos_encoder(xseq)
         dist = self.encoder(xseq, src_key_padding_mask=~aug_mask)[0][:dist.shape[0]]
+        dist = self.latent_pre(dist)
 
         mu = dist[0:self.latent_size, ...]
         logvar = dist[self.latent_size:, ...]
@@ -108,6 +115,7 @@ class MldVae(nn.Module):
 
     def decode(self, z: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # [batch_size, latent_dim[0], latent_dim[1]] -> [latent_dim[0], batch_size, latent_dim[1]]
+        z = self.latent_post(z)
         z = z.permute(1, 0, 2)
         bs, nframes = mask.shape
         queries = torch.zeros(nframes, bs, self.latent_dim, device=z.device)
