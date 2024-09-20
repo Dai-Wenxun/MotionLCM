@@ -9,7 +9,7 @@ from torch import linalg
 
 # Motion Reconstruction
 
-def calculate_mpjpe(gt_joints, pred_joints):
+def calculate_mpjpe(gt_joints: torch.Tensor, pred_joints: torch.Tensor, align_root: bool = True) -> torch.Tensor:
     """
     gt_joints: num_poses x num_joints x 3
     pred_joints: num_poses x num_joints x 3
@@ -19,8 +19,9 @@ def calculate_mpjpe(gt_joints, pred_joints):
         f"GT shape: {gt_joints.shape}, pred shape: {pred_joints.shape}"
 
     # Align by root (pelvis)
-    gt_joints = gt_joints - gt_joints[:, [0]]
-    pred_joints = pred_joints - pred_joints[:, [0]]
+    if align_root:
+        gt_joints = gt_joints - gt_joints[:, [0]]
+        pred_joints = pred_joints - pred_joints[:, [0]]
 
     # Compute MPJPE
     mpjpe = torch.linalg.norm(pred_joints - gt_joints, dim=-1)  # num_poses x num_joints
