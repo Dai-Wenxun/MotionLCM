@@ -309,7 +309,7 @@ def main():
                 noisy_model_input,
                 start_timesteps,
                 timestep_cond=w_embedding,
-                encoder_hidden_states=prompt_embeds)
+                encoder_hidden_states=prompt_embeds)[0]
 
             pred_x_0 = predicted_origin(
                 noise_pred,
@@ -328,7 +328,7 @@ def main():
                 cond_teacher_output = teacher_unet(
                     noisy_model_input,
                     start_timesteps,
-                    encoder_hidden_states=prompt_embeds)
+                    encoder_hidden_states=prompt_embeds)[0]
                 cond_pred_x0 = predicted_origin(
                     cond_teacher_output,
                     start_timesteps,
@@ -341,7 +341,7 @@ def main():
                 uncond_teacher_output = teacher_unet(
                     noisy_model_input,
                     start_timesteps,
-                    encoder_hidden_states=uncond_prompt_embeds[:bsz])
+                    encoder_hidden_states=uncond_prompt_embeds[:bsz])[0]
                 uncond_pred_x0 = predicted_origin(
                     uncond_teacher_output,
                     start_timesteps,
@@ -361,7 +361,7 @@ def main():
                     x_prev.float(),
                     timesteps,
                     timestep_cond=w_embedding,
-                    encoder_hidden_states=prompt_embeds)
+                    encoder_hidden_states=prompt_embeds)[0]
                 pred_x_0 = predicted_origin(
                     target_noise_pred,
                     timesteps,
