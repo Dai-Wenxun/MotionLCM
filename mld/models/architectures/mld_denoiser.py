@@ -58,6 +58,7 @@ class MldDenoiser(nn.Module):
                  moe_loss_weight: float = 1e-2,
                  moe_jitter_noise: Optional[float] = None,
                  time_cond_proj_dim: Optional[int] = None,
+                 zero_init_cond: bool = True,
                  is_controlnet: bool = False) -> None:
         super(MldDenoiser, self).__init__()
 
@@ -74,8 +75,8 @@ class MldDenoiser(nn.Module):
         self.moe_loss_weight = moe_loss_weight
 
         self.time_proj = Timesteps(time_dim, flip_sin_to_cos, freq_shift)
-        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, time_act_fn,
-                                                post_act_fn=time_post_act_fn, cond_proj_dim=time_cond_proj_dim)
+        self.time_embedding = TimestepEmbedding(time_dim, self.latent_dim, time_act_fn, post_act_fn=time_post_act_fn,
+                                                cond_proj_dim=time_cond_proj_dim, zero_init_cond=zero_init_cond)
         self.emb_proj = nn.Sequential(get_activation_fn(text_act_fn), nn.Linear(text_dim, self.latent_dim))
 
         self.query_pos = build_position_encoding(self.latent_dim, position_embedding=position_embedding)
