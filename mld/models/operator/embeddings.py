@@ -45,13 +45,15 @@ def get_timestep_embedding(
 class TimestepEmbedding(nn.Module):
     def __init__(self, in_channels: int, time_embed_dim: int, act_fn: str,
                  out_dim: Optional[int] = None, post_act_fn: Optional[str] = None,
-                 cond_proj_dim: Optional[int] = None) -> None:
+                 cond_proj_dim: Optional[int] = None, zero_init_cond: bool = True) -> None:
         super(TimestepEmbedding, self).__init__()
 
         self.linear_1 = nn.Linear(in_channels, time_embed_dim)
 
         if cond_proj_dim is not None:
             self.cond_proj = nn.Linear(cond_proj_dim, in_channels, bias=False)
+            if zero_init_cond:
+                self.cond_proj.weight.data.fill_(0.0)
         else:
             self.cond_proj = None
 
