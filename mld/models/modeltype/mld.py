@@ -101,6 +101,9 @@ class MLD(BaseModel):
         texts = batch["text"]
         lengths = batch["length"]
 
+        # demo for [example] or [dataset]
+        maybe_has_gt = 'motion' in batch
+
         if self.do_classifier_free_guidance:
             texts = [""] * len(texts) + texts
 
@@ -110,15 +113,20 @@ class MLD(BaseModel):
         z = self._diffusion_reverse(text_emb, hint)
 
         with torch.no_grad():
+            if maybe_has_gt:
+                padding_to_max_length = batch['motion'].shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+                mask = lengths_to_mask(lengths, text_emb.device, max_len=padding_to_max_length)
+            else:
+                mask = lengths_to_mask(lengths, text_emb.device)
             z = z / self.cfg.model.vae_scale_factor
-            feats_rst = self.vae.decode(z, lengths)
+            feats_rst = self.vae.decode(z, mask)
+
         joints = self.feats2joints(feats_rst.detach().cpu())
         joints = remove_padding(joints, lengths)
 
         joints_ref = None
-        if 'motion' in batch:
-            feats_ref = batch['motion']
-            joints_ref = self.feats2joints(feats_ref.detach().cpu())
+        if maybe_has_gt:
+            joints_ref = self.feats2joints(batch['motion'].detach().cpu())
             joints_ref = remove_padding(joints_ref, lengths)
 
         return joints, joints_ref
@@ -315,7 +323,7 @@ class MLD(BaseModel):
         loss_dict = dict()
 
         if self.denoiser.time_cond_proj_dim is not None:
-            # LCM
+            # LCM (only used in motion ControlNet)
             model_pred = n_set['sample_pred']
             target = n_set['sample_gt']
             # Performance comparison: l2 loss > huber loss when training controlnet for LCM
@@ -341,7 +349,7 @@ class MLD(BaseModel):
 
         if self.is_controlnet and self.vaeloss:
             z_pred = n_set['sample_pred'] / self.cfg.model.vae_scale_factor
-            feats_rst = self.vae.decode(z_pred.transpose(0, 1), lengths)
+            feats_rst = self.vae.decode(z_pred, mask)
             joints_rst = self.feats2joints(feats_rst)
             joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], -1)
             joints_rst = self.datamodule.norm_spatial(joints_rst)
