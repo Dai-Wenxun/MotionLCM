@@ -71,7 +71,7 @@ def main():
     cfg.model.is_controlnet = is_controlnet
     logger.info(f'Is Controlnet: {is_controlnet}')
 
-    dataset = get_dataset(cfg, phase="test")
+    dataset = get_dataset(cfg)
     model = MLD(cfg, dataset)
     model.to(device)
     model.eval()
@@ -106,7 +106,7 @@ def main():
                     plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(), text[i], fps=20)
 
     else:
-        test_dataloader = datasets.test_dataloader()
+        test_dataloader = dataset.test_dataloader()
         for rep_i in range(cfg.replication):
             for batch_id, batch in enumerate(test_dataloader):
                 batch = move_batch_to_device(batch, device)
