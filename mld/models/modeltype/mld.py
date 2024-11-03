@@ -55,29 +55,16 @@ class MLD(BaseModel):
             c_cfg = self.cfg.model.denoiser.copy()
             c_cfg['params']['is_controlnet'] = True
             self.controlnet = instantiate_from_config(c_cfg)
-            self.training_control_joint = cfg.model.training_control_joint
-            self.testing_control_joint = cfg.model.testing_control_joint
-            self.training_density = cfg.model.training_density
-            self.testing_density = cfg.model.testing_density
             self.control_scale = cfg.model.control_scale
             self.vaeloss = cfg.model.vaeloss
             self.vaeloss_type = cfg.model.vaeloss_type
             self.cond_ratio = cfg.model.cond_ratio
             self.rot_ratio = cfg.model.rot_ratio
-
-            self.is_controlnet_temporal = cfg.model.is_controlnet_temporal
-
             self.traj_encoder = instantiate_from_config(cfg.model.traj_encoder)
 
             logger.info(f"control_scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
                         f"cond_ratio: {self.cond_ratio}, rot_ratio: {self.rot_ratio}, "
                         f"vaeloss_type: {self.vaeloss_type}")
-            logger.info(f"is_controlnet_temporal: {self.is_controlnet_temporal}")
-            logger.info(f"training_control_joint: {self.training_control_joint}")
-            logger.info(f"testing_control_joint: {self.testing_control_joint}")
-            logger.info(f"training_density: {self.training_density}")
-            logger.info(f"testing_density: {self.testing_density}")
-
             time.sleep(2)
 
         self.summarize_parameters()
@@ -97,11 +84,11 @@ class MLD(BaseModel):
             logger.info(f'ControlNet: {controlnet}M')
             logger.info(f'Spatial VAE: {vae}M')
 
-    def forward(self, batch: dict) -> tuple:
+    def forward(self, batch: dict, optimize: bool = False) -> tuple:
         texts = batch["text"]
         lengths = batch["length"]
 
-        # demo for [example] or [dataset]
+        # demo for [example]-[False] or [dataset]-[True]
         maybe_has_gt = 'motion' in batch
 
         if self.do_classifier_free_guidance:
@@ -109,7 +96,18 @@ class MLD(BaseModel):
 
         text_emb = self.text_encoder(texts)
 
+        if self.is_controlnet:
+            assert 'hint' in batch, "Hint needed for motion ControlNet"
+            hint_mask = batch['hint'].sum(-1) != 0
+            controlnet_cond = self.traj_encoder(batch['hint'], mask=hint_mask)
+
+
+
+
+
         hint = batch['hint'] if 'hint' in batch else None  # control signals
+        if optimize:
+            pass
         z = self._diffusion_reverse(text_emb, hint)
 
         with torch.no_grad():
@@ -148,7 +146,8 @@ class MLD(BaseModel):
 
         return pred_original_sample, pred_epsilon
 
-    def _diffusion_reverse(self, encoder_hidden_states: torch.Tensor, hint: torch.Tensor = None) -> torch.Tensor:
+    def _diffusion_reverse(self, encoder_hidden_states: torch.Tensor, hint: Optional[torch.Tensor] = None,
+                           init_latents: Optional[torch.Tensor] = None) -> torch.Tensor:
 
         controlnet_cond = None
         if self.is_controlnet:
