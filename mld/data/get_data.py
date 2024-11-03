@@ -72,7 +72,7 @@ def get_dataset(cfg: DictConfig, motion_only: bool = False) -> BaseDataModule:
             fps=eval(f"cfg.DATASET.{dataset_name.upper()}.FRAME_RATE"),
             padding_to_max=cfg.DATASET.PADDING_TO_MAX,
             window_size=cfg.DATASET.WINDOW_SIZE,
-            model_kwargs=cfg.model)
+            control_args=eval(f"cfg.DATASET.{dataset_name.upper()}.CONTROL_ARGS"))
 
     elif dataset_name.lower() in ["humanact12", 'uestc', "amass"]:
         raise NotImplementedError
