@@ -192,24 +192,25 @@ class Text2MotionDatasetV2(data.Dataset):
         self.mean = mean
         self.std = std
 
-        self.mode = None
-        model_params = kwargs['model_kwargs']
-        if 'is_controlnet' in model_params and model_params.is_controlnet is True:
-            if 'test' in split_file or 'val' in split_file:
-                self.mode = 'eval'
+        control_args = kwargs['control_args']
+        self.control_mode = None
+        if not tiny and control_args.CONTROL:
+            self.t_ctrl = control_args.TEMPORAL
+            self.raw_mean = np.load(pjoin(control_args.MEAN_STD_PATH, 'Mean_raw.npy'))
+            self.raw_std = np.load(pjoin(control_args.MEAN_STD_PATH, 'Std_raw.npy'))
+            self.training_control_joints = np.array(control_args.TRAIN_JOINTS)
+            self.testing_control_joints = np.array(control_args.TEST_JOINTS)
+            self.training_density = control_args.TRAIN_DENSITY
+            self.testing_density = control_args.TEST_DESITY
+
+            self.control_mode = 'val' if ('test' in split_file or 'val' in split_file) else 'train'
+            if self.control_mode == 'train':
+                logger.info(f'Training Control Joints: {self.training_control_joints}')
+                logger.info(f'Training Control Density: {self.training_density}')
             else:
-                self.mode = 'train'
-
-            self.t_ctrl = model_params.is_controlnet_temporal
-            spatial_norm_path = './datasets/humanml_spatial_norm'
-            self.raw_mean = np.load(pjoin(spatial_norm_path, 'Mean_raw.npy'))
-            self.raw_std = np.load(pjoin(spatial_norm_path, 'Std_raw.npy'))
-
-            self.training_control_joint = np.array(model_params.training_control_joint)
-            self.testing_control_joint = np.array(model_params.testing_control_joint)
-
-            self.training_density = model_params.training_density
-            self.testing_density = model_params.testing_density
+                logger.info(f'Testing Control Joints: {self.testing_control_joints}')
+                logger.info(f'Testing Control Density: {self.testing_density}')
+            logger.info(f"Temporal Control: {self.t_ctrl}")
 
         self.data_dict = data_dict
         self.name_list = name_list
@@ -218,7 +219,7 @@ class Text2MotionDatasetV2(data.Dataset):
         return len(self.name_list)
 
     def random_mask(self, joints: np.ndarray, n_joints: int = 22) -> np.ndarray:
-        choose_joint = self.testing_control_joint
+        choose_joint = self.testing_control_joints
 
         length = joints.shape[0]
         density = self.testing_density
@@ -245,12 +246,12 @@ class Text2MotionDatasetV2(data.Dataset):
 
     def random_mask_train(self, joints: np.ndarray, n_joints: int = 22) -> np.ndarray:
         if self.t_ctrl:
-            choose_joint = self.training_control_joint
+            choose_joint = self.training_control_joints
         else:
-            num_joints = len(self.training_control_joint)
+            num_joints = len(self.training_control_joints)
             num_joints_control = 1
             choose_joint = np.random.choice(num_joints, num_joints_control, replace=False)
-            choose_joint = self.training_control_joint[choose_joint]
+            choose_joint = self.training_control_joints[choose_joint]
 
         length = joints.shape[0]
 
@@ -315,14 +316,14 @@ class Text2MotionDatasetV2(data.Dataset):
         motion = motion[idx:idx + m_length]
 
         hint = None
-        if self.mode is not None:
+        if self.control_mode is not None:
             n_joints = 22 if motion.shape[-1] == 263 else 21
             # hint is global position of the controllable joints
             joints = recover_from_ric(torch.from_numpy(motion).float(), n_joints)
             joints = joints.numpy()
 
             # control any joints at any time
-            if self.mode == 'train':
+            if self.control_mode == 'train':
                 hint = self.random_mask_train(joints, n_joints)
             else:
                 hint = self.random_mask(joints, n_joints)
