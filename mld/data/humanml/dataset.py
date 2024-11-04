@@ -7,15 +7,15 @@ import numpy as np
 from rich.progress import track
 
 import torch
-from torch.utils import data
+from torch.utils.data import Dataset
 
-from mld.data.humanml.scripts.motion_process import recover_from_ric
+from .scripts.motion_process import recover_from_ric
 from .utils.word_vectorizer import WordVectorizer
 
 logger = logging.getLogger(__name__)
 
 
-class MotionDataset(data.Dataset):
+class MotionDataset(Dataset):
     def __init__(self, mean: np.ndarray, std: np.ndarray,
                  split_file: str, motion_dir: str, window_size: int,
                  tiny: bool = False, progress_bar: bool = True, **kwargs) -> None:
@@ -74,7 +74,7 @@ class MotionDataset(data.Dataset):
         return motion, self.window_size
 
 
-class Text2MotionDatasetV2(data.Dataset):
+class Text2MotionDataset(Dataset):
 
     def __init__(
         self,
@@ -90,6 +90,7 @@ class Text2MotionDatasetV2(data.Dataset):
         text_dir: str,
         fps: int,
         padding_to_max: bool,
+        njoints: int,
         tiny: bool = False,
         progress_bar: bool = True,
         **kwargs,
@@ -100,6 +101,7 @@ class Text2MotionDatasetV2(data.Dataset):
         self.max_text_len = max_text_len
         self.unit_length = unit_length
         self.padding_to_max = padding_to_max
+        self.njoints = njoints
 
         data_dict = {}
         id_list = []
@@ -163,7 +165,7 @@ class Text2MotionDatasetV2(data.Dataset):
                                 }
                                 new_name_list.append(new_name)
                                 length_list.append(len(n_motion))
-                            except:
+                            except ValueError:
                                 print(line_split)
                                 print(line_split[2], line_split[3], f_tag, to_tag, name)
 
@@ -218,7 +220,7 @@ class Text2MotionDatasetV2(data.Dataset):
     def __len__(self) -> int:
         return len(self.name_list)
 
-    def random_mask(self, joints: np.ndarray, n_joints: int = 22) -> np.ndarray:
+    def random_mask(self, joints: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         choose_joint = self.testing_control_joints
 
         length = joints.shape[0]
@@ -234,17 +236,15 @@ class Text2MotionDatasetV2(data.Dataset):
             choose_seq = np.random.choice(length, choose_seq_num, replace=False)
             choose_seq.sort()
 
-        mask_seq = np.zeros((length, n_joints, 3)).astype(bool)
-
+        mask_seq = np.zeros((length, self.njoints, 3))
         for cj in choose_joint:
-            mask_seq[choose_seq, cj] = True
+            mask_seq[choose_seq, cj] = 1.0
 
-        # normalize
-        joints = (joints - self.raw_mean.reshape(n_joints, 3)) / self.raw_std.reshape(n_joints, 3)
+        joints = (joints - self.raw_mean) / self.raw_std
         joints = joints * mask_seq
-        return joints
+        return joints, mask_seq
 
-    def random_mask_train(self, joints: np.ndarray, n_joints: int = 22) -> np.ndarray:
+    def random_mask_train(self, joints: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         if self.t_ctrl:
             choose_joint = self.training_control_joints
         else:
@@ -266,15 +266,13 @@ class Text2MotionDatasetV2(data.Dataset):
             choose_seq = np.random.choice(length, choose_seq_num, replace=False)
             choose_seq.sort()
 
-        mask_seq = np.zeros((length, n_joints, 3)).astype(bool)
-
+        mask_seq = np.zeros((length, self.njoints, 3))
         for cj in choose_joint:
-            mask_seq[choose_seq, cj] = True
+            mask_seq[choose_seq, cj] = 1
 
-        # normalize
-        joints = (joints - self.raw_mean.reshape(n_joints, 3)) / self.raw_std.reshape(n_joints, 3)
+        joints = (joints - self.raw_mean) / self.raw_std
         joints = joints * mask_seq
-        return joints
+        return joints, mask_seq
 
     def __getitem__(self, idx: int) -> tuple:
         data = self.data_dict[self.name_list[idx]]
@@ -315,23 +313,19 @@ class Text2MotionDatasetV2(data.Dataset):
         idx = random.randint(0, len(motion) - m_length)
         motion = motion[idx:idx + m_length]
 
-        hint = None
+        hint, hint_mask = None, None
         if self.control_mode is not None:
-            n_joints = 22 if motion.shape[-1] == 263 else 21
-            # hint is global position of the controllable joints
-            joints = recover_from_ric(torch.from_numpy(motion).float(), n_joints)
+            joints = recover_from_ric(torch.from_numpy(motion).float(), self.njoints)
             joints = joints.numpy()
-
-            # control any joints at any time
             if self.control_mode == 'train':
-                hint = self.random_mask_train(joints, n_joints)
+                hint, hint_mask = self.random_mask_train(joints)
             else:
-                hint = self.random_mask(joints, n_joints)
+                hint, hint_mask = self.random_mask(joints)
 
-            hint = hint.reshape(hint.shape[0], -1)
             if self.padding_to_max:
-                padding = np.zeros((self.max_motion_length - m_length, hint.shape[1]))
+                padding = np.zeros((self.max_motion_length - m_length, *hint.shape[1:]))
                 hint = np.concatenate([hint, padding], axis=0)
+                hint_mask = np.concatenate([hint_mask, padding], axis=0)
 
         "Z Normalization"
         motion = (motion - self.mean) / self.std
@@ -340,13 +334,11 @@ class Text2MotionDatasetV2(data.Dataset):
             padding = np.zeros((self.max_motion_length - m_length, motion.shape[1]))
             motion = np.concatenate([motion, padding], axis=0)
 
-        return (
-            word_embeddings,
-            pos_one_hots,
-            caption,
-            sent_len,
-            motion,
-            m_length,
-            "_".join(tokens),
-            hint
-        )
+        return (word_embeddings,
+                pos_one_hots,
+                caption,
+                sent_len,
+                motion,
+                m_length,
+                "_".join(tokens),
+                (hint, hint_mask))

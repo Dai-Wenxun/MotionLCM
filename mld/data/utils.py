@@ -32,8 +32,9 @@ def mld_collate(batch: list) -> dict:
     }
 
     # collate trajectory
-    if notnone_batches[0][-1] is not None:
-        adapted_batch['hint'] = collate_tensors([torch.tensor(b[-1]).float() for b in notnone_batches])
+    if notnone_batches[0][-1][0] is not None:
+        adapted_batch['hint'] = collate_tensors([torch.tensor(b[-1][0]).float() for b in notnone_batches])
+        adapted_batch['hint_mask'] = collate_tensors([torch.tensor(b[-1][1]).float() for b in notnone_batches])
 
     return adapted_batch
 
