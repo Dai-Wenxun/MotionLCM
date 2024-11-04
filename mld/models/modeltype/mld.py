@@ -9,6 +9,7 @@ from omegaconf import DictConfig
 
 import torch
 import torch.nn.functional as F
+from diffusers.optimization import get_scheduler
 
 from mld.data.base import BaseDataModule
 from mld.config import instantiate_from_config
@@ -67,11 +68,16 @@ class MLD(BaseModel):
                         f"vaeloss_type: {self.vaeloss_type}")
             time.sleep(2)
 
+        self.dno = instantiate_from_config(cfg.model.noise_optimizer)
         self.summarize_parameters()
 
     @property
     def do_classifier_free_guidance(self) -> bool:
         return self.guidance_scale > 1 and self.denoiser.time_cond_proj_dim is None
+
+    @property
+    def max_motion_length(self) -> Optional[int]:
+        return self.cfg.DATASET.SAMPLER.MAX_LEN if self.cfg.DATASET.PADDING_TO_MAX else None
 
     def summarize_parameters(self) -> None:
         logger.info(f'VAE Encoder: {count_parameters(self.vae.encoder)}M')
@@ -146,24 +152,57 @@ class MLD(BaseModel):
 
         return pred_original_sample, pred_epsilon
 
-    def _diffusion_reverse(self, encoder_hidden_states: torch.Tensor, hint: Optional[torch.Tensor] = None,
-                           init_latents: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def _diffusion_reverse_with_optimize(
+            self,
+            latents: torch.Tensor,
+            encoder_hidden_states: torch.Tensor,
+            mask: torch.Tensor,
+            hint: torch.Tensor,
+            hint_mask: torch.Tensor,
+            controlnet_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
 
-        controlnet_cond = None
-        if self.is_controlnet:
-            hint_mask = hint.sum(-1) != 0
-            controlnet_cond = self.traj_encoder(hint, mask=hint_mask)
-            controlnet_cond = controlnet_cond.permute(1, 0, 2)
+        current_latents = latents.clone().requires_grad_(True)
 
-        # init latents
-        bsz = encoder_hidden_states.shape[0]
-        if self.do_classifier_free_guidance:
-            bsz = bsz // 2
+        optimizer = torch.optim.Adam([current_latents], lr=self.dno.learning_rate)
+        lr_scheduler = get_scheduler(
+            self.dno.lr_scheduler,
+            optimizer=optimizer,
+            num_warmup_steps=self.dno.lr_warmup_steps,
+            num_training_steps=self.dno.max_train_steps)
 
-        latents = torch.randn(
-            (bsz, self.latent_dim[0], self.latent_dim[-1]),
-            device=encoder_hidden_states.device,
-            dtype=torch.float)
+        for step in tqdm.tqdm(range(self.dno.max_train_steps)):
+            z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
+            z_pred = z_pred / self.cfg.model.vae_scale_factor
+
+            feats_rst = self.vae.decode(z_pred, mask)
+            joints_rst = self.feats2joints(feats_rst)
+            hint = self.datamodule.denorm_spatial(hint)
+
+            loss_hint = F.smooth_l1_loss(joints_rst, hint) * hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
+            loss_hint = loss_hint.sum(dim=[1, 2, 3]) / hint_mask.sum(dim=[1, 2, 3])
+            loss = loss_hint.sum()
+
+            loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
+            loss += self.dno.loss_diff_penalty * loss_diff.sum()
+
+            loss_correlate = self.dno.noise_regularize_1d(current_latents, dim=1)
+            loss += self.dno.loss_correlate_penalty * loss_correlate.sum()
+
+            optimizer.zero_grad()
+            loss.backward()
+            current_latents.grad.data /= current_latents.grad.norm(p=2, dim=[1, 2], keepdim=True)
+            optimizer.step()
+            lr_scheduler.step()
+
+            print(f"step: {step}, loss: {loss.item()}")
+
+        return current_latents
+
+    def _diffusion_reverse(
+            self,
+            latents: torch.Tensor,
+            encoder_hidden_states: torch.Tensor,
+            controlnet_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
 
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
@@ -423,20 +462,37 @@ class MLD(BaseModel):
         text_et = time.time()
         self.text_encoder_times.append(text_et - text_st)
 
+        controlnet_cond = None
+        if self.is_controlnet:
+            assert 'hint' in batch
+            hint_st = time.time()
+            hint, hint_mask = batch['hint'], batch['hint_mask']
+            hint = hint.view(hint.shape[0], hint.shape[1], -1)
+            hint_mask = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(-1) != 0
+            controlnet_cond = self.traj_encoder(hint, mask=hint_mask)
+            hint_et = time.time()
+            self.traj_encoder_times.append(hint_et - hint_st)
+
         diff_st = time.time()
-        hint = batch['hint'] if 'hint' in batch else None  # control signals
-        z = self._diffusion_reverse(text_emb, hint)
+        latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
+        mask = lengths_to_mask(lengths, latents.device, max_len=self.max_motion_length)
+        if 'hint' in batch:
+            hint, hint_mask = batch['hint'], batch['hint_mask']
+            with torch.enable_grad():
+                z = self._diffusion_reverse_with_optimize(latents, text_emb, mask, hint, hint_mask,
+                                                          controlnet_cond=controlnet_cond)
+        else:
+            z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
         diff_et = time.time()
         self.diffusion_times.append(diff_et - diff_st)
 
-        with torch.no_grad():
-            padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-            mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
-            z = z / self.cfg.model.vae_scale_factor
-            vae_st = time.time()
-            feats_rst = self.vae.decode(z, mask)
-            vae_et = time.time()
-            self.vae_decode_times.append(vae_et - vae_st)
+        padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
+        mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
+        z = z / self.cfg.model.vae_scale_factor
+        vae_st = time.time()
+        feats_rst = self.vae.decode(z, mask)
+        vae_et = time.time()
+        self.vae_decode_times.append(vae_et - vae_st)
 
         self.frames.extend(lengths)
 
