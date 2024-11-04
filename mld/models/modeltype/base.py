@@ -17,6 +17,7 @@ class BaseModel(nn.Module):
         super().__init__()
         self.times = []
         self.text_encoder_times = []
+        self.traj_encoder_times = []
         self.diffusion_times = []
         self.vae_decode_times = []
         self.vae_encode_times = []
@@ -69,6 +70,10 @@ class BaseModel(nn.Module):
         if len(self.text_encoder_times) > 0:
             inference_aits_text = round(np.sum(self.text_encoder_times) / total_samples, 5)
             message += f"Average Inference Time per Sentence [Text]: {inference_aits_text}\n"
+
+        if len(self.traj_encoder_times) > 0:
+            inference_aits_hint = round(np.sum(self.traj_encoder_times) / total_samples, 5)
+            message += f"Average Inference Time per Sentence [Hint]: {inference_aits_hint}\n"
 
         if len(self.diffusion_times) > 0:
             inference_aits_diff = round(np.sum(self.diffusion_times) / total_samples, 5)
