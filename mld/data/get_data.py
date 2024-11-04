@@ -1,15 +1,14 @@
-from os.path import join as pjoin
 from typing import Optional
+from os.path import join as pjoin
 
 import numpy as np
 
 from omegaconf import DictConfig
 
-from .humanml.utils.word_vectorizer import WordVectorizer
-from .HumanML3D import HumanML3DDataModule
-from .Kit import KitDataModule
+from .data import DataModule
 from .base import BaseDataModule
 from .utils import mld_collate, mld_collate_motion_only
+from .humanml.utils.word_vectorizer import WordVectorizer
 
 
 def get_mean_std(phase: str, cfg: DictConfig, dataset_name: str) -> tuple[np.ndarray, np.ndarray]:
@@ -39,7 +38,7 @@ def get_WordVectorizer(cfg: DictConfig, dataset_name: str) -> Optional[WordVecto
         raise ValueError("Only support WordVectorizer for HumanML3D and KIT")
 
 
-dataset_module_map = {"humanml3d": HumanML3DDataModule, "kit": KitDataModule}
+dataset_module_map = {"humanml3d": DataModule, "kit": DataModule}
 motion_subdir = {"humanml3d": "new_joint_vecs", "kit": "new_joint_vecs"}
 
 
@@ -52,6 +51,7 @@ def get_dataset(cfg: DictConfig, motion_only: bool = False) -> BaseDataModule:
         wordVectorizer = None if motion_only else get_WordVectorizer(cfg, dataset_name)
         collate_fn = mld_collate_motion_only if motion_only else mld_collate
         dataset = dataset_module_map[dataset_name.lower()](
+            name=dataset_name.lower(),
             cfg=cfg,
             motion_only=motion_only,
             batch_size=cfg.TRAIN.BATCH_SIZE,
@@ -74,9 +74,9 @@ def get_dataset(cfg: DictConfig, motion_only: bool = False) -> BaseDataModule:
             window_size=cfg.DATASET.WINDOW_SIZE,
             control_args=eval(f"cfg.DATASET.{dataset_name.upper()}.CONTROL_ARGS"))
 
+        cfg.DATASET.NFEATS = dataset.nfeats
+        cfg.DATASET.NJOINTS = dataset.njoints
+        return dataset
+
     elif dataset_name.lower() in ["humanact12", 'uestc', "amass"]:
         raise NotImplementedError
-
-    cfg.DATASET.NFEATS = dataset.nfeats
-    cfg.DATASET.NJOINTS = dataset.njoints
-    return dataset

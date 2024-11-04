@@ -7,13 +7,18 @@ from omegaconf import DictConfig
 import torch
 
 from .base import BaseDataModule
-from .humanml.dataset import Text2MotionDatasetV2, MotionDataset
+from .humanml.dataset import Text2MotionDataset, MotionDataset
 from .humanml.scripts.motion_process import recover_from_ric
 
 
-class HumanML3DDataModule(BaseDataModule):
+# (nfeats, njoints)
+dataset_map = {'humanml3d': (263, 22), 'kit': (251, 21)}
+
+
+class DataModule(BaseDataModule):
 
     def __init__(self,
+                 name: str,
                  cfg: DictConfig,
                  motion_only: bool,
                  batch_size: int,
@@ -25,12 +30,11 @@ class HumanML3DDataModule(BaseDataModule):
                          num_workers=num_workers,
                          collate_fn=collate_fn,
                          persistent_workers=persistent_workers)
-        self.hparams = copy.deepcopy(kwargs)
-        self.name = "humanml3d"
-        self.njoints = 22
-        self.nfeats = 263
         self.cfg = cfg
-        self.Dataset = MotionDataset if motion_only else Text2MotionDatasetV2
+        self.name = name
+        self.nfeats, self.njoints = dataset_map[name]
+        self.hparams = copy.deepcopy({**kwargs, 'njoints': self.njoints})
+        self.Dataset = MotionDataset if motion_only else Text2MotionDataset
         sample_overrides = {"tiny": True, "progress_bar": False}
         self._sample_set = self.get_sample_set(overrides=sample_overrides)
 
