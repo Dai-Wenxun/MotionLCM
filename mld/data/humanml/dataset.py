@@ -195,11 +195,11 @@ class Text2MotionDataset(Dataset):
         self.std = std
 
         control_args = kwargs['control_args']
+        self.raw_mean = np.load(pjoin(control_args.MEAN_STD_PATH, 'Mean_raw.npy'))
+        self.raw_std = np.load(pjoin(control_args.MEAN_STD_PATH, 'Std_raw.npy'))
         self.control_mode = None
         if not tiny and control_args.CONTROL:
             self.t_ctrl = control_args.TEMPORAL
-            self.raw_mean = np.load(pjoin(control_args.MEAN_STD_PATH, 'Mean_raw.npy'))
-            self.raw_std = np.load(pjoin(control_args.MEAN_STD_PATH, 'Std_raw.npy'))
             self.training_control_joints = np.array(control_args.TRAIN_JOINTS)
             self.testing_control_joints = np.array(control_args.TEST_JOINTS)
             self.training_density = control_args.TRAIN_DENSITY
