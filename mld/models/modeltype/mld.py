@@ -179,8 +179,9 @@ class MLD(BaseModel):
             joints_rst = self.feats2joints(feats_rst)
             hint = self.datamodule.denorm_spatial(hint)
 
-            loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
-            loss_hint = loss_hint.sum(dim=[1, 2, 3]) / hint_mask.sum(dim=[1, 2, 3])
+            combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
+            loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * combined_mask
+            loss_hint = loss_hint.sum(dim=[1, 2, 3]) / combined_mask.sum(dim=[1, 2, 3])
             loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
             loss_correlate = self.dno.noise_regularize_1d(current_latents, dim=1)
             loss = loss_hint + self.dno.loss_correlate_penalty * loss_correlate + self.dno.loss_diff_penalty * loss_diff
