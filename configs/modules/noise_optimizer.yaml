@@ -7,3 +7,6 @@ noise_optimizer:
     lr_warmup_steps: 50
     loss_diff_penalty: 0
     loss_correlate_penalty: 0
+    visualize: true
+    visualize_samples: 4
+    output_dir: ${output_dir}
