@@ -69,6 +69,7 @@ class MLD(BaseModel):
             time.sleep(2)
 
         self.dno = instantiate_from_config(cfg.model.noise_optimizer)
+
         self.summarize_parameters()
 
     @property
@@ -161,11 +162,7 @@ class MLD(BaseModel):
             hint_mask: torch.Tensor,
             controlnet_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
 
-        from torch.utils.tensorboard import SummaryWriter
-        writer = SummaryWriter(f'/home/wenxun/Motion/MotionLCM/experiments_t2m_test/mld_humanml/{np.random.randint(2048)}')
-
         current_latents = latents.clone().requires_grad_(True)
-
         optimizer = torch.optim.Adam([current_latents], lr=self.dno.learning_rate)
         lr_scheduler = get_scheduler(
             self.dno.lr_scheduler,
@@ -173,6 +170,7 @@ class MLD(BaseModel):
             num_warmup_steps=self.dno.lr_warmup_steps,
             num_training_steps=self.dno.max_train_steps)
 
+        do_visualize = self.dno.do_visualize
         for step in tqdm.tqdm(range(self.dno.max_train_steps)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
             z_pred = z_pred / self.cfg.model.vae_scale_factor
@@ -181,28 +179,31 @@ class MLD(BaseModel):
             joints_rst = self.feats2joints(feats_rst)
             hint = self.datamodule.denorm_spatial(hint)
 
-            loss_hint = F.l1_loss(joints_rst, hint, reduction='none') * hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
+            loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
             loss_hint = loss_hint.sum(dim=[1, 2, 3]) / hint_mask.sum(dim=[1, 2, 3])
-            loss = loss_hint.sum()
-
             loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
-            loss += self.dno.loss_diff_penalty * loss_diff.sum()
-
             loss_correlate = self.dno.noise_regularize_1d(current_latents, dim=1)
-            loss += self.dno.loss_correlate_penalty * loss_correlate.sum()
-
+            loss = loss_hint + self.dno.loss_correlate_penalty * loss_correlate + self.dno.loss_diff_penalty * loss_diff
+            loss_mean = loss.mean()
             optimizer.zero_grad()
-            loss.backward()
+            loss_mean.backward()
 
-            writer.add_scalar('loss', scalar_value=loss.item(), global_step=step)
-            writer.add_scalar('loss_diff', scalar_value=loss_diff.item(), global_step=step)
-            writer.add_scalar('loss_correlate', scalar_value=loss_correlate.item(), global_step=step)
-            writer.add_scalar('grad_norm', scalar_value=current_latents.grad.norm(p=2).item(), global_step=step)
+            grad_norm = current_latents.grad.norm(p=2, dim=[1, 2], keepdim=True)
+            current_latents.grad.data /= grad_norm
 
-            current_latents.grad.data /= current_latents.grad.norm(p=2, dim=[1, 2], keepdim=True)
+            if self.dno.writer is not None and do_visualize:
+                for batch_id in range(hint.shape[0]):
+                    vis_id = self.dno.visualize_samples_done * hint.shape[0] + batch_id
+                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss', loss[batch_id].item(), step)
+                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_hint', loss_hint[batch_id].mean().item(), step)
+                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_diff', loss_diff[batch_id].item(), step)
+                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_correlate', loss_correlate[batch_id].item(), step)
+                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/grad_norm', grad_norm[batch_id].item(), step)
+                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/lr', lr_scheduler.get_last_lr()[0], step)
+
             optimizer.step()
             lr_scheduler.step()
-            writer.add_scalar('diff_norm', scalar_value=(current_latents - latents).norm(p=2).item(), global_step=step)
+
         return current_latents
 
     def _diffusion_reverse(

@@ -28,23 +28,23 @@ def main():
     set_seed(cfg.TRAIN.SEED_VALUE)
 
     name_time_str = osp.join(cfg.NAME, datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S"))
-    output_dir = osp.join(cfg.FOLDER, name_time_str)
-    os.makedirs(output_dir, exist_ok=False)
-    os.makedirs(f"{output_dir}/checkpoints", exist_ok=False)
+    cfg.output_dir = osp.join(cfg.FOLDER, name_time_str)
+    os.makedirs(cfg.output_dir, exist_ok=False)
+    os.makedirs(f"{cfg.output_dir}/checkpoints", exist_ok=False)
     if cfg.TRAIN.model_ema:
-        os.makedirs(f"{output_dir}/checkpoints_ema", exist_ok=False)
+        os.makedirs(f"{cfg.output_dir}/checkpoints_ema", exist_ok=False)
 
     if cfg.vis == "tb":
-        writer = SummaryWriter(output_dir)
+        writer = SummaryWriter(cfg.output_dir)
     elif cfg.vis == "swanlab":
         writer = swanlab.init(project="MotionLCM",
-                              experiment_name=os.path.normpath(output_dir).replace(os.path.sep, "-"),
-                              suffix=None, config=dict(**cfg), logdir=output_dir)
+                              experiment_name=os.path.normpath(cfg.output_dir).replace(os.path.sep, "-"),
+                              suffix=None, config=dict(**cfg), logdir=cfg.output_dir)
     else:
         raise ValueError(f"Invalid vis method: {cfg.vis}")
 
     stream_handler = logging.StreamHandler(sys.stdout)
-    file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))
+    file_handler = logging.FileHandler(osp.join(cfg.output_dir, 'output.log'))
     handlers = [file_handler, stream_handler]
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -52,7 +52,7 @@ def main():
                         handlers=handlers)
     logger = logging.getLogger(__name__)
 
-    OmegaConf.save(cfg, osp.join(output_dir, 'config.yaml'))
+    OmegaConf.save(cfg, osp.join(cfg.output_dir, 'config.yaml'))
 
     transformers.utils.logging.set_verbosity_warning()
     diffusers.utils.logging.set_verbosity_info()
@@ -166,14 +166,14 @@ def main():
                 model_ema.update_parameters(model)
 
             if global_step % cfg.TRAIN.checkpointing_steps == 0:
-                save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-{global_step}.ckpt")
+                save_path = os.path.join(cfg.output_dir, 'checkpoints', f"checkpoint-{global_step}.ckpt")
                 ckpt = dict(state_dict=model.state_dict())
                 model.on_save_checkpoint(ckpt)
                 torch.save(ckpt, save_path)
                 logger.info(f"Saved state to {save_path}")
 
                 if cfg.TRAIN.model_ema:
-                    save_path = os.path.join(output_dir, 'checkpoints_ema', f"checkpoint-{global_step}.ckpt")
+                    save_path = os.path.join(cfg.output_dir, 'checkpoints_ema', f"checkpoint-{global_step}.ckpt")
                     ckpt = dict(state_dict=model_ema.module.state_dict())
                     model_ema.module.on_save_checkpoint(ckpt)
                     torch.save(ckpt, save_path)
@@ -186,7 +186,7 @@ def main():
 
                 if cur_rp1 > max_rp1:
                     max_rp1 = cur_rp1
-                    save_path = os.path.join(output_dir, 'checkpoints',
+                    save_path = os.path.join(cfg.output_dir, 'checkpoints',
                                              f"checkpoint-{global_step}-rp1-{round(cur_rp1, 3)}.ckpt")
                     ckpt = dict(state_dict=model.state_dict())
                     model.on_save_checkpoint(ckpt)
@@ -195,7 +195,7 @@ def main():
 
                 if cur_fid < min_fid:
                     min_fid = cur_fid
-                    save_path = os.path.join(output_dir, 'checkpoints',
+                    save_path = os.path.join(cfg.output_dir, 'checkpoints',
                                              f"checkpoint-{global_step}-fid-{round(cur_fid, 3)}.ckpt")
                     ckpt = dict(state_dict=model.state_dict())
                     model.on_save_checkpoint(ckpt)
@@ -214,13 +214,13 @@ def main():
                     writer.log({f"Train/{k}": v}, step=global_step)
 
             if global_step >= cfg.TRAIN.max_train_steps:
-                save_path = os.path.join(output_dir, 'checkpoints', f"checkpoint-last.ckpt")
+                save_path = os.path.join(cfg.output_dir, 'checkpoints', f"checkpoint-last.ckpt")
                 ckpt = dict(state_dict=model.state_dict())
                 model.on_save_checkpoint(ckpt)
                 torch.save(ckpt, save_path)
 
                 if cfg.TRAIN.model_ema:
-                    save_path = os.path.join(output_dir, 'checkpoints_ema', f"checkpoint-last.ckpt")
+                    save_path = os.path.join(cfg.output_dir, 'checkpoints_ema', f"checkpoint-last.ckpt")
                     ckpt = dict(state_dict=model_ema.module.state_dict())
                     model_ema.module.on_save_checkpoint(ckpt)
                     torch.save(ckpt, save_path)
