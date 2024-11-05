@@ -172,7 +172,6 @@ class MLD(BaseModel):
             num_warmup_steps=self.dno.lr_warmup_steps,
             num_training_steps=self.dno.max_train_steps)
 
-        do_visualize = self.dno.do_visualize
         hint = self.datamodule.denorm_spatial(hint) * hint_mask
         mask = lengths_to_mask(lengths, latents.device, max_len=self.max_motion_length)
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
@@ -193,28 +192,30 @@ class MLD(BaseModel):
             loss_mean.backward()
 
             grad_norm = current_latents.grad.norm(p=2, dim=[1, 2], keepdim=True)
-            current_latents.grad.data /= grad_norm
+            if self.dno.clip_grad:
+                current_latents.grad.data /= grad_norm
 
-            if self.dno.writer is not None and do_visualize:
-                for batch_id in range(latents.shape[0]):
-                    vis_id = self.dno.visualize_samples_done * hint.shape[0] + batch_id
-                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss', loss[batch_id].item(), step)
-                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_hint', loss_hint[batch_id].mean().item(), step)
-                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_diff', loss_diff[batch_id].item(), step)
-                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_correlate', loss_correlate[batch_id].item(), step)
-                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/grad_norm', grad_norm[batch_id].item(), step)
-                    self.dno.writer.add_scalar(f'Optimize/{vis_id}/lr', lr_scheduler.get_last_lr()[0], step)
+            # Visualize
+            for batch_id in range(latents.shape[0]):
+                if self.dno.do_visualize:
+                    vis_id = self.dno.visualize_samples_done
+                    metrics = {
+                        'loss': loss[batch_id].item(),
+                        'loss_hint': loss_hint[batch_id].mean().item(),
+                        'loss_diff': loss_diff[batch_id].item(),
+                        'loss_correlate': loss_correlate[batch_id].item(),
+                        'grad_norm': grad_norm[batch_id].item(),
+                        'lr': lr_scheduler.get_last_lr()[0]
+                    }
+                    for metric_name, metric_value in metrics.items():
+                        self.dno.writer.add_scalar(f'Optimize/{vis_id}/{metric_name}', metric_value, step)
 
-                if step in self.dno.visualize_ske_steps:
-                    vis_dir = os.path.join(self.dno.output_dir, 'vis_optimize')
-                    os.makedirs(vis_dir)
-                    joints_rst_no_pad = remove_padding(joints_rst, lengths)
-                    hint_no_pad = remove_padding(hint, lengths)
-                    for batch_id in range(latents.shape[0]):
-                        plot_3d_motion(f'{vis_dir}/step_{step}_batch_id_{batch_id}.mp4',
-                                       joints_rst_no_pad[batch_id].detach().cpu().numpy(), texts[batch_id],
-                                       fps=eval(eval(f"cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE")),
-                                       hint=hint_no_pad[batch_id].detach().cpu().numpy())
+                    if step in self.dno.visualize_ske_steps:
+                        joints_rst_no_pad = joints_rst[batch_id][:lengths[batch_id]].detach().cpu().numpy()
+                        hint_no_pad = hint[batch_id][:lengths[batch_id]].detach().cpu().numpy()
+                        plot_3d_motion(f'{self.dno.vis_dir}/step_{step}_vis_id_{vis_id}.mp4',
+                                       joints_rst_no_pad, texts[batch_id], hint=hint_no_pad,
+                                       fps=eval(eval(f"cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE")))
 
             optimizer.step()
             lr_scheduler.step()

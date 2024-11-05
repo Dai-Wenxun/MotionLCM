@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -9,6 +11,7 @@ class DNO(object):
             learning_rate: float,
             lr_scheduler: str,
             lr_warmup_steps: int,
+            clip_grad: bool,
             loss_diff_penalty: float,
             loss_correlate_penalty: float,
             visualize: bool,
@@ -21,6 +24,7 @@ class DNO(object):
         self.learning_rate = learning_rate
         self.lr_scheduler = lr_scheduler
         self.lr_warmup_steps = lr_warmup_steps
+        self.clip_grad = clip_grad
         self.loss_diff_penalty = loss_diff_penalty
         self.loss_correlate_penalty = loss_correlate_penalty
 
@@ -34,8 +38,10 @@ class DNO(object):
 
         self.writer = None
         self.output_dir = output_dir
+        self.vis_dir = os.path.join(output_dir, 'vis_optimize')
         if self.visualize:
             self.writer = SummaryWriter(output_dir)
+        os.makedirs(self.vis_dir)
 
     @property
     def do_visualize(self):
