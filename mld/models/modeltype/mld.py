@@ -510,15 +510,16 @@ class MLD(BaseModel):
 
         # joints recover
         joints_rst = self.feats2joints(feats_rst)
+        joints_ref = self.feats2joints(feats_ref)
 
         from mld.data.humanml.utils.plot_script import plot_3d_motion
         vis_hint_mask = batch['hint_mask']
         vis_hint = self.datamodule.denorm_spatial(batch['hint'][0]).view(*vis_hint_mask.shape) * vis_hint_mask
-        plot_3d_motion('test.mp4', joints_rst[0].detach().cpu().numpy(),
-                       texts[0], fps=20, hint=vis_hint.detach().cpu().numpy())
+        plot_3d_motion(f'{self.dno.output_dir}/gen.mp4', joints_rst[0].detach().cpu().numpy(), texts[0], fps=20,
+                       hint=vis_hint.detach().cpu().numpy())
+        plot_3d_motion(f'{self.dno.output_dir}/ref.mp4', joints_ref[0].detach().cpu().numpy(), texts[0], fps=20,
+                       hint=vis_hint.detach().cpu().numpy())
         exit(0)
-
-        joints_ref = self.feats2joints(feats_ref)
 
         # renorm for t2m evaluators
         feats_rst = self.datamodule.renorm4t2m(feats_rst)
