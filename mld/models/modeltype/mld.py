@@ -1,3 +1,4 @@
+import os
 import time
 import inspect
 import logging
@@ -15,6 +16,7 @@ from mld.data.base import BaseDataModule
 from mld.config import instantiate_from_config
 from mld.utils.temos_utils import lengths_to_mask, remove_padding
 from mld.utils.utils import count_parameters, get_guidance_scale_embedding, extract_into_tensor, sum_flat
+from mld.data.humanml.utils.plot_script import plot_3d_motion
 
 from .base import BaseModel
 
@@ -157,9 +159,8 @@ class MLD(BaseModel):
             self,
             latents: torch.Tensor,
             encoder_hidden_states: torch.Tensor,
-            mask: torch.Tensor,
-            hint: torch.Tensor,
-            hint_mask: torch.Tensor,
+            texts: list[str], lengths: list[int],
+            hint: torch.Tensor, hint_mask: torch.Tensor,
             controlnet_cond: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
 
@@ -172,13 +173,14 @@ class MLD(BaseModel):
             num_training_steps=self.dno.max_train_steps)
 
         do_visualize = self.dno.do_visualize
-        for step in tqdm.tqdm(range(self.dno.max_train_steps)):
+        hint = self.datamodule.denorm_spatial(hint) * hint_mask
+        mask = lengths_to_mask(lengths, latents.device, max_len=self.max_motion_length)
+        for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
             z_pred = z_pred / self.cfg.model.vae_scale_factor
 
             feats_rst = self.vae.decode(z_pred, mask)
             joints_rst = self.feats2joints(feats_rst)
-            hint = self.datamodule.denorm_spatial(hint)
 
             combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
             loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * combined_mask
@@ -194,7 +196,7 @@ class MLD(BaseModel):
             current_latents.grad.data /= grad_norm
 
             if self.dno.writer is not None and do_visualize:
-                for batch_id in range(hint.shape[0]):
+                for batch_id in range(latents.shape[0]):
                     vis_id = self.dno.visualize_samples_done * hint.shape[0] + batch_id
                     self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss', loss[batch_id].item(), step)
                     self.dno.writer.add_scalar(f'Optimize/{vis_id}/loss_hint', loss_hint[batch_id].mean().item(), step)
@@ -203,10 +205,22 @@ class MLD(BaseModel):
                     self.dno.writer.add_scalar(f'Optimize/{vis_id}/grad_norm', grad_norm[batch_id].item(), step)
                     self.dno.writer.add_scalar(f'Optimize/{vis_id}/lr', lr_scheduler.get_last_lr()[0], step)
 
+                if step in self.dno.visualize_ske_steps:
+                    vis_dir = os.path.join(self.dno.output_dir, 'vis_optimize')
+                    os.makedirs(vis_dir)
+                    joints_rst_no_pad = remove_padding(joints_rst, lengths)
+                    hint_no_pad = remove_padding(hint, lengths)
+                    for batch_id in range(latents.shape[0]):
+                        plot_3d_motion(f'{vis_dir}/step_{step}_batch_id_{batch_id}.mp4',
+                                       joints_rst_no_pad[batch_id].detach().cpu().numpy(), texts[batch_id],
+                                       fps=eval(eval(f"cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE")),
+                                       hint=hint_no_pad[batch_id].detach().cpu().numpy())
+
             optimizer.step()
             lr_scheduler.step()
 
-        return current_latents
+        exit(0)
+        return current_latents.detach()
 
     def _diffusion_reverse(
             self,
@@ -485,12 +499,12 @@ class MLD(BaseModel):
 
         diff_st = time.time()
         latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
-        mask = lengths_to_mask(lengths, latents.device, max_len=self.max_motion_length)
         if 'hint' in batch:
             hint, hint_mask = batch['hint'], batch['hint_mask']
             with torch.enable_grad():
-                z = self._diffusion_reverse_with_optimize(latents, text_emb, mask, hint, hint_mask,
-                                                          controlnet_cond=controlnet_cond)
+                z = self._diffusion_reverse_with_optimize(
+                    latents, text_emb, texts, lengths,
+                    hint, hint_mask, controlnet_cond=controlnet_cond)
         else:
             z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
         diff_et = time.time()
@@ -512,15 +526,6 @@ class MLD(BaseModel):
         # joints recover
         joints_rst = self.feats2joints(feats_rst)
         joints_ref = self.feats2joints(feats_ref)
-
-        from mld.data.humanml.utils.plot_script import plot_3d_motion
-        vis_hint_mask = batch['hint_mask']
-        vis_hint = self.datamodule.denorm_spatial(batch['hint'][0]).view(*vis_hint_mask.shape) * vis_hint_mask
-        plot_3d_motion(f'{self.dno.output_dir}/gen.mp4', joints_rst[0].detach().cpu().numpy(), texts[0], fps=20,
-                       hint=vis_hint.detach().cpu().numpy())
-        plot_3d_motion(f'{self.dno.output_dir}/ref.mp4', joints_ref[0].detach().cpu().numpy(), texts[0], fps=20,
-                       hint=vis_hint.detach().cpu().numpy())
-        exit(0)
 
         # renorm for t2m evaluators
         feats_rst = self.datamodule.renorm4t2m(feats_rst)

@@ -1,6 +1,6 @@
 scheduler:
   target: diffusers.DDIMScheduler
-  num_inference_timesteps: 50
+  num_inference_timesteps: 10
   eta: 0.0
   params:
     num_train_timesteps: 1000
