@@ -57,7 +57,7 @@ DATASET:
     UNIT_LEN: 4
     ROOT: './datasets/humanml3d'
     CONTROL_ARGS:
-      CONTROL: true
+      CONTROL: false
       TEMPORAL: false
       TRAIN_JOINTS: [0]
       TEST_JOINTS: [0]
