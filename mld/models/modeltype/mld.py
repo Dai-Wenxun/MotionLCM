@@ -160,7 +160,8 @@ class MLD(BaseModel):
             mask: torch.Tensor,
             hint: torch.Tensor,
             hint_mask: torch.Tensor,
-            controlnet_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
+            controlnet_cond: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
 
         current_latents = latents.clone().requires_grad_(True)
         optimizer = torch.optim.Adam([current_latents], lr=self.dno.learning_rate)
