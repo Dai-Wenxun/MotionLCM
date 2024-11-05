@@ -5,6 +5,7 @@ noise_optimizer:
     learning_rate: 0.4
     lr_scheduler: 'cosine'
     lr_warmup_steps: 50
+    clip_grad: true
     loss_diff_penalty: 0.002
     loss_correlate_penalty: 1000
     visualize: true
