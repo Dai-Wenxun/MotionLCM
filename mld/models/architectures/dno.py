@@ -13,6 +13,7 @@ class DNO(object):
             loss_correlate_penalty: float,
             visualize: bool,
             visualize_samples: int,
+            visualize_ske_steps: list[int],
             output_dir: str
     ) -> None:
 
@@ -27,6 +28,10 @@ class DNO(object):
         self.visualize_samples = visualize_samples
         self.visualize_samples_done = -1
         assert self.visualize_samples > 0
+        self.visualize_ske_steps = visualize_ske_steps
+        for step in visualize_ske_steps:
+            assert step <= max_train_steps
+
         self.writer = None
         self.output_dir = output_dir
         if self.visualize:
