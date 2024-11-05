@@ -161,6 +161,9 @@ class MLD(BaseModel):
             hint_mask: torch.Tensor,
             controlnet_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
 
+        from torch.utils.tensorboard import SummaryWriter
+        writer = SummaryWriter(f'/home/wenxun/Motion/MotionLCM/experiments_t2m_test/mld_humanml/{np.random.randint(2048)}')
+
         current_latents = latents.clone().requires_grad_(True)
 
         optimizer = torch.optim.Adam([current_latents], lr=self.dno.learning_rate)
@@ -178,7 +181,7 @@ class MLD(BaseModel):
             joints_rst = self.feats2joints(feats_rst)
             hint = self.datamodule.denorm_spatial(hint)
 
-            loss_hint = F.smooth_l1_loss(joints_rst, hint) * hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
+            loss_hint = F.l1_loss(joints_rst, hint, reduction='none') * hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
             loss_hint = loss_hint.sum(dim=[1, 2, 3]) / hint_mask.sum(dim=[1, 2, 3])
             loss = loss_hint.sum()
 
@@ -190,12 +193,16 @@ class MLD(BaseModel):
 
             optimizer.zero_grad()
             loss.backward()
+
+            writer.add_scalar('loss', scalar_value=loss.item(), global_step=step)
+            writer.add_scalar('loss_diff', scalar_value=loss_diff.item(), global_step=step)
+            writer.add_scalar('loss_correlate', scalar_value=loss_correlate.item(), global_step=step)
+            writer.add_scalar('grad_norm', scalar_value=current_latents.grad.norm(p=2).item(), global_step=step)
+
             current_latents.grad.data /= current_latents.grad.norm(p=2, dim=[1, 2], keepdim=True)
             optimizer.step()
             lr_scheduler.step()
-
-            print(f"step: {step}, loss: {loss.item()}")
-
+            writer.add_scalar('diff_norm', scalar_value=(current_latents - latents).norm(p=2).item(), global_step=step)
         return current_latents
 
     def _diffusion_reverse(
@@ -501,6 +508,14 @@ class MLD(BaseModel):
 
         # joints recover
         joints_rst = self.feats2joints(feats_rst)
+
+        from mld.data.humanml.utils.plot_script import plot_3d_motion
+        vis_hint_mask = batch['hint_mask']
+        vis_hint = self.datamodule.denorm_spatial(batch['hint'][0]).view(*vis_hint_mask.shape) * vis_hint_mask
+        plot_3d_motion('test.mp4', joints_rst[0].detach().cpu().numpy(),
+                       texts[0], fps=20, hint=vis_hint.detach().cpu().numpy())
+        exit(0)
+
         joints_ref = self.feats2joints(feats_ref)
 
         # renorm for t2m evaluators

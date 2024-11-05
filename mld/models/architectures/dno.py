@@ -30,7 +30,7 @@ class DNO(object):
             noise = torch.cat([noise, pad_noise], dim=dim)
             size = noise.shape[dim]
 
-        loss = torch.tensor(0., device=noise.device)
+        loss = torch.zeros(noise.shape[0], device=noise.device)
         while size > stop_at:
             rolled_noise = torch.roll(noise, shifts=1, dims=dim)
             loss += (noise * rolled_noise).mean(dim=tuple(range(1, noise.ndim))).pow(2)
