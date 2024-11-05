@@ -28,6 +28,7 @@ class DNO(object):
         self.visualize_samples_done = -1
         assert self.visualize_samples > 0
         self.writer = None
+        self.output_dir = output_dir
         if self.visualize:
             self.writer = SummaryWriter(output_dir)
 
