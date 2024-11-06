@@ -44,7 +44,7 @@ class ControlMetrics(Metric):
 
         joints_np = joints.cpu().numpy()
         hint_np = hint.cpu().numpy()
-        hint_mask_np = hint_mask.cpu().numpy()
+        hint_mask_np = hint_mask.mean(dim=-1).cpu().numpy()
 
         for j, h, m in zip(joints_np, hint_np, hint_mask_np):
             control_error = control_l2(j[None], h[None], m[None])

@@ -169,14 +169,13 @@ class MLD(BaseModel):
 
         do_visualize = self.dno.do_visualize
         hint_3d = self.datamodule.denorm_spatial(hint) * hint_mask
-        combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
             feats_rst = self.vae.decode(z_pred / self.cfg.model.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
-            loss_hint = F.smooth_l1_loss(joints_rst, hint_3d, reduction='none') * combined_mask
-            loss_hint = loss_hint.sum(dim=[1, 2, 3]) / combined_mask.sum(dim=[1, 2, 3])
+            loss_hint = F.smooth_l1_loss(joints_rst, hint_3d, reduction='none') * hint_mask
+            loss_hint = loss_hint.sum(dim=[1, 2, 3]) / hint_mask.sum(dim=[1, 2, 3])
             loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
             loss_correlate = self.dno.noise_regularize_1d(current_latents, dim=1)
             loss = loss_hint + self.dno.loss_correlate_penalty * loss_correlate + self.dno.loss_diff_penalty * loss_diff
