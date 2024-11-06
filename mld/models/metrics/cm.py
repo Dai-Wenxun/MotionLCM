@@ -8,10 +8,11 @@ from .utils import calculate_skating_ratio, calculate_trajectory_error, control_
 
 class ControlMetrics(Metric):
 
-    def __init__(self, dist_sync_on_step: bool = True) -> None:
+    def __init__(self, dataset_name: str, dist_sync_on_step: bool = True) -> None:
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
         self.name = "Control errors"
+        self.dataset_name = dataset_name
 
         self.add_state("count_seq", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("skate_ratio_sum", default=torch.tensor(0.), dist_reduce_fx="sum")
@@ -33,19 +34,19 @@ class ControlMetrics(Metric):
         return metrics
 
     def update(self, joints: torch.Tensor,  hint: torch.Tensor,
-               mask_hint: torch.Tensor, lengths: list[int]) -> None:
+               hint_mask: torch.Tensor, lengths: list[int]) -> None:
         self.count_seq += len(lengths)
 
         joints_no_padding = remove_padding(joints, lengths)
         for j in joints_no_padding:
-            skate_ratio, _ = calculate_skating_ratio(j.unsqueeze(0).permute(0, 2, 3, 1))
+            skate_ratio, _ = calculate_skating_ratio(j.unsqueeze(0), self.dataset_name)
             self.skate_ratio_sum += skate_ratio[0]
 
         joints_np = joints.cpu().numpy()
         hint_np = hint.cpu().numpy()
-        mask_hint_np = mask_hint.cpu().numpy()
+        hint_mask_np = hint_mask.cpu().numpy()
 
-        for j, h, m in zip(joints_np, hint_np, mask_hint_np):
+        for j, h, m in zip(joints_np, hint_np, hint_mask_np):
             control_error = control_l2(j[None], h[None], m[None])
             mean_error = control_error.sum() / m.sum()
             self.dist_sum += mean_error
