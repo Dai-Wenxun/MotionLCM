@@ -50,4 +50,4 @@ class ControlMetrics(Metric):
             control_error = control_error.reshape(-1)
             m = m.reshape(-1)
             err_np = calculate_trajectory_error(control_error, mean_error, m)
-            self.traj_err.append(err_np[None], device=joints.device)
+            self.traj_err.append(err_np[None].to(joints.device))
