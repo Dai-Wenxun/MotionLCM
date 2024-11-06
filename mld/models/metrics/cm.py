@@ -42,15 +42,12 @@ class ControlMetrics(Metric):
             skate_ratio, _ = calculate_skating_ratio(j.unsqueeze(0), self.dataset_name)
             self.skate_ratio_sum += skate_ratio[0]
 
-        joints_np = joints.cpu().numpy()
-        hint_np = hint.cpu().numpy()
-        hint_mask_np = hint_mask.mean(dim=-1).cpu().numpy()
-
-        for j, h, m in zip(joints_np, hint_np, hint_mask_np):
-            control_error = control_l2(j[None], h[None], m[None])
+        hint_mask = hint_mask.sum(dim=-1, keepdim=True) != 0
+        for j, h, m in zip(joints, hint, hint_mask):
+            control_error = control_l2(j, h, m)
             mean_error = control_error.sum() / m.sum()
             self.dist_sum += mean_error
             control_error = control_error.reshape(-1)
             m = m.reshape(-1)
             err_np = calculate_trajectory_error(control_error, mean_error, m)
-            self.traj_err.append(torch.tensor(err_np[None], device=joints.device))
+            self.traj_err.append(err_np[None], device=joints.device)
