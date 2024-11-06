@@ -1,5 +1,7 @@
 import torch
 
+from mld.utils.temos_utils import lengths_to_mask
+
 
 def collate_tensors(batch: list) -> torch.Tensor:
     dims = batch[0].dim()
@@ -30,6 +32,9 @@ def mld_collate(batch: list) -> dict:
         collate_tensors([torch.tensor(b[3]) for b in notnone_batches]),
         "tokens": [b[6] for b in notnone_batches]
     }
+
+    mask = lengths_to_mask(adapted_batch['length'], adapted_batch['motion'].device, adapted_batch['motion'].shape[1])
+    adapted_batch['mask'] = mask
 
     # collate trajectory
     if notnone_batches[0][-1][0] is not None:

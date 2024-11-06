@@ -77,10 +77,6 @@ class MLD(BaseModel):
     def do_classifier_free_guidance(self) -> bool:
         return self.guidance_scale > 1 and self.denoiser.time_cond_proj_dim is None
 
-    @property
-    def max_motion_length(self) -> Optional[int]:
-        return self.cfg.DATASET.SAMPLER.MAX_LEN if self.cfg.DATASET.PADDING_TO_MAX else None
-
     def summarize_parameters(self) -> None:
         logger.info(f'VAE Encoder: {count_parameters(self.vae.encoder)}M')
         logger.info(f'VAE Decoder: {count_parameters(self.vae.decoder)}M')
@@ -158,7 +154,7 @@ class MLD(BaseModel):
             self,
             latents: torch.Tensor,
             encoder_hidden_states: torch.Tensor,
-            texts: list[str], lengths: list[int],
+            texts: list[str], lengths: list[int], mask: torch.Tensor,
             hint: torch.Tensor, hint_mask: torch.Tensor,
             controlnet_cond: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
@@ -173,13 +169,10 @@ class MLD(BaseModel):
 
         do_visualize = self.dno.do_visualize
         hint = self.datamodule.denorm_spatial(hint) * hint_mask
-        mask = lengths_to_mask(lengths, latents.device, max_len=self.max_motion_length)
         combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
-            z_pred = z_pred / self.cfg.model.vae_scale_factor
-
-            feats_rst = self.vae.decode(z_pred, mask)
+            feats_rst = self.vae.decode(z_pred / self.cfg.model.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
             loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * combined_mask
@@ -208,15 +201,13 @@ class MLD(BaseModel):
                         'lr': lr_scheduler.get_last_lr()[0]
                     }
                     for metric_name, metric_value in metrics.items():
-                        self.dno.writer.add_scalar(f'Optimize/{vis_id+batch_id}/{metric_name}', metric_value, step)
+                        self.dno.writer.add_scalar(f'Optimize_{vis_id+batch_id}/{metric_name}', metric_value, step)
 
                     if step in self.dno.visualize_ske_steps:
                         joints_rst_no_pad = joints_rst[batch_id][:lengths[batch_id]].detach().cpu().numpy()
                         hint_no_pad = hint[batch_id][:lengths[batch_id]].detach().cpu().numpy()
                         plot_3d_motion(f'{self.dno.vis_dir}/vis_id_{vis_id+batch_id}_step_{step}.mp4',
-                                       joints=joints_rst_no_pad,
-                                       title=texts[len(texts)//2 + batch_id] if self.do_classifier_free_guidance else texts[batch_id],
-                                       hint=hint_no_pad,
+                                       joints=joints_rst_no_pad, title=texts[batch_id], hint=hint_no_pad,
                                        fps=eval(f"self.cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE"))
 
             optimizer.step()
@@ -287,7 +278,7 @@ class MLD(BaseModel):
 
             # perform guidance
             if self.do_classifier_free_guidance:
-                model_output_uncond, model_output_text = model_output.chunk(2)
+                model_output_text, model_output_uncond = model_output.chunk(2)
                 model_output = model_output_uncond + self.guidance_scale * (model_output_text - model_output_uncond)
 
             latents = self.scheduler.step(model_output, t, latents, **extra_step_kwargs).prev_sample
@@ -466,6 +457,7 @@ class MLD(BaseModel):
     def t2m_eval(self, batch: dict) -> dict:
         texts = batch["text"]
         feats_ref = batch["motion"]
+        mask = batch['mask']
         lengths = batch["length"]
         word_embs = batch["word_embs"]
         pos_ohot = batch["pos_ohot"]
@@ -482,7 +474,7 @@ class MLD(BaseModel):
             text_lengths = text_lengths.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
 
         if self.do_classifier_free_guidance:
-            texts = [""] * len(texts) + texts
+            texts = texts + [""] * len(texts)
 
         text_st = time.time()
         text_emb = self.text_encoder(texts)
@@ -506,18 +498,15 @@ class MLD(BaseModel):
             hint, hint_mask = batch['hint'], batch['hint_mask']
             with torch.enable_grad():
                 z = self._diffusion_reverse_with_optimize(
-                    latents, text_emb, texts, lengths,
+                    latents, text_emb, texts, lengths, mask,
                     hint, hint_mask, controlnet_cond=controlnet_cond)
         else:
             z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
         diff_et = time.time()
         self.diffusion_times.append(diff_et - diff_st)
 
-        padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-        mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
-        z = z / self.cfg.model.vae_scale_factor
         vae_st = time.time()
-        feats_rst = self.vae.decode(z, mask)
+        feats_rst = self.vae.decode(z / self.cfg.model.vae_scale_factor, mask)
         vae_et = time.time()
         self.vae_decode_times.append(vae_et - vae_st)
 
@@ -552,25 +541,14 @@ class MLD(BaseModel):
         # t2m text encoder
         text_emb = self.t2m_textencoder(word_embs, pos_ohot, text_lengths)[align_idx]
 
-        rs_set = {
-            "m_ref": feats_ref,
-            "m_rst": feats_rst,
-            "lat_t": text_emb,
-            "lat_m": motion_emb,
-            "lat_rm": recons_emb,
-            "joints_ref": joints_ref,
-            "joints_rst": joints_rst
-        }
+        rs_set = {"m_ref": feats_ref, "m_rst": feats_rst,
+                  "lat_t": text_emb, "lat_m": motion_emb, "lat_rm": recons_emb,
+                  "joints_ref": joints_ref, "joints_rst": joints_rst}
 
         if 'hint' in batch:
-            hint = batch['hint']
-            mask_hint = hint.view(hint.shape[0], hint.shape[1], self.njoints, 3).sum(dim=-1, keepdim=True) != 0
-            hint = self.datamodule.denorm_spatial(hint)
-            hint = hint.view(hint.shape[0], hint.shape[1], self.njoints, 3) * mask_hint
+            hint = self.datamodule.denorm_spatial(batch['hint']) * batch['hint_mask']
             rs_set['hint'] = hint
-            rs_set['mask_hint'] = mask_hint
-        else:
-            rs_set['hint'] = None
+            rs_set['hint_mask'] = batch['hint_mask']
 
         return rs_set
 
@@ -593,9 +571,8 @@ class MLD(BaseModel):
                 elif metric == "MMMetrics" and self.datamodule.is_mm:
                     getattr(self, metric).update(rs_set["lat_rm"].unsqueeze(0), batch["length"])
                 elif metric == 'ControlMetrics':
-                    assert rs_set['hint'] is not None
                     getattr(self, metric).update(rs_set["joints_rst"], rs_set['hint'],
-                                                 rs_set['mask_hint'], batch['length'])
+                                                 rs_set['hint_mask'], batch['length'])
                 else:
                     raise TypeError(f"Not support this metric: {metric}.")
 
