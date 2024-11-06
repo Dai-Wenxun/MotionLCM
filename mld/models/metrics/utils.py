@@ -255,22 +255,22 @@ def calculate_skating_ratio(motions: torch.Tensor, dataset_name: str) -> tuple:
     return skating_ratio, skate_vel
 
 
-def calculate_trajectory_error(dist_error: np.ndarray, mean_err_traj: np.ndarray,
-                               mask: np.ndarray, strict: bool = True) -> np.ndarray:
+def calculate_trajectory_error(dist_error: torch.Tensor, mean_err_traj: torch.Tensor,
+                               mask: torch.Tensor, strict: bool = True) -> torch.Tensor:
     if strict:
         # Traj fails if any of the key frame fails
-        traj_fail_02 = 1.0 - (dist_error <= 0.2).all()
-        traj_fail_05 = 1.0 - (dist_error <= 0.5).all()
+        traj_fail_02 = 1.0 - int((dist_error <= 0.2).all().item())
+        traj_fail_05 = 1.0 - int((dist_error <= 0.5).all().item())
     else:
         # Traj fails if the mean error of all keyframes more than the threshold
-        traj_fail_02 = (mean_err_traj > 0.2)
-        traj_fail_05 = (mean_err_traj > 0.5)
+        traj_fail_02 = int((mean_err_traj > 0.2).item())
+        traj_fail_05 = int((mean_err_traj > 0.5).item())
     all_fail_02 = (dist_error > 0.2).sum() / mask.sum()
     all_fail_05 = (dist_error > 0.5).sum() / mask.sum()
 
-    return np.array([traj_fail_02, traj_fail_05, all_fail_02, all_fail_05, dist_error.sum() / mask.sum()])
+    return torch.tensor([traj_fail_02, traj_fail_05, all_fail_02, all_fail_05, dist_error.sum() / mask.sum()])
 
 
-def control_l2(motion: np.ndarray, hint: np.ndarray, hint_mask: np.ndarray) -> np.ndarray:
-    loss = np.linalg.norm((motion - hint) * hint_mask, axis=-1)
+def control_l2(motion: torch.Tensor, hint: torch.Tensor, hint_mask: torch.Tensor) -> torch.Tensor:
+    loss = torch.norm((motion - hint) * hint_mask, p=2, dim=-1)
     return loss
