@@ -30,7 +30,7 @@ class DNO(object):
 
         self.visualize = visualize
         self.visualize_samples = visualize_samples
-        self.visualize_samples_done = -1
+        self.visualize_samples_done = 0
         assert self.visualize_samples > 0
         self.visualize_ske_steps = visualize_ske_steps
         for step in visualize_ske_steps:
@@ -45,7 +45,6 @@ class DNO(object):
 
     @property
     def do_visualize(self):
-        self.visualize_samples_done += 1
         return self.visualize and self.visualize_samples_done < self.visualize_samples
 
     @staticmethod

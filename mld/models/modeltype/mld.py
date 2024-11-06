@@ -1,4 +1,3 @@
-import os
 import time
 import inspect
 import logging
@@ -172,8 +171,10 @@ class MLD(BaseModel):
             num_warmup_steps=self.dno.lr_warmup_steps,
             num_training_steps=self.dno.max_train_steps)
 
+        do_visualize = self.dno.do_visualize
         hint = self.datamodule.denorm_spatial(hint) * hint_mask
         mask = lengths_to_mask(lengths, latents.device, max_len=self.max_motion_length)
+        combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
             z_pred = z_pred / self.cfg.model.vae_scale_factor
@@ -181,7 +182,6 @@ class MLD(BaseModel):
             feats_rst = self.vae.decode(z_pred, mask)
             joints_rst = self.feats2joints(feats_rst)
 
-            combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
             loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * combined_mask
             loss_hint = loss_hint.sum(dim=[1, 2, 3]) / combined_mask.sum(dim=[1, 2, 3])
             loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
@@ -196,8 +196,8 @@ class MLD(BaseModel):
                 current_latents.grad.data /= grad_norm
 
             # Visualize
-            for batch_id in range(latents.shape[0]):
-                if self.dno.do_visualize:
+            if do_visualize:
+                for batch_id in range(latents.shape[0]):
                     vis_id = self.dno.visualize_samples_done
                     metrics = {
                         'loss': loss[batch_id].item(),
@@ -208,19 +208,21 @@ class MLD(BaseModel):
                         'lr': lr_scheduler.get_last_lr()[0]
                     }
                     for metric_name, metric_value in metrics.items():
-                        self.dno.writer.add_scalar(f'Optimize/{vis_id}/{metric_name}', metric_value, step)
+                        self.dno.writer.add_scalar(f'Optimize/{vis_id+batch_id}/{metric_name}', metric_value, step)
 
                     if step in self.dno.visualize_ske_steps:
                         joints_rst_no_pad = joints_rst[batch_id][:lengths[batch_id]].detach().cpu().numpy()
                         hint_no_pad = hint[batch_id][:lengths[batch_id]].detach().cpu().numpy()
-                        plot_3d_motion(f'{self.dno.vis_dir}/step_{step}_vis_id_{vis_id}.mp4',
-                                       joints_rst_no_pad, texts[batch_id], hint=hint_no_pad,
-                                       fps=eval(eval(f"cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE")))
+                        plot_3d_motion(f'{self.dno.vis_dir}/vis_id_{vis_id+batch_id}_step_{step}.mp4',
+                                       joints=joints_rst_no_pad,
+                                       title=texts[len(texts)//2 + batch_id] if self.do_classifier_free_guidance else texts[batch_id],
+                                       hint=hint_no_pad,
+                                       fps=eval(f"self.cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE"))
 
             optimizer.step()
             lr_scheduler.step()
 
-        exit(0)
+        self.dno.visualize_samples_done += latents.shape[0]
         return current_latents.detach()
 
     def _diffusion_reverse(
