@@ -168,14 +168,14 @@ class MLD(BaseModel):
             num_training_steps=self.dno.max_train_steps)
 
         do_visualize = self.dno.do_visualize
-        hint = self.datamodule.denorm_spatial(hint) * hint_mask
+        hint_3d = self.datamodule.denorm_spatial(hint) * hint_mask
         combined_mask = hint_mask * mask.unsqueeze(-1).unsqueeze(-1)
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
             feats_rst = self.vae.decode(z_pred / self.cfg.model.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
-            loss_hint = F.smooth_l1_loss(joints_rst, hint, reduction='none') * combined_mask
+            loss_hint = F.smooth_l1_loss(joints_rst, hint_3d, reduction='none') * combined_mask
             loss_hint = loss_hint.sum(dim=[1, 2, 3]) / combined_mask.sum(dim=[1, 2, 3])
             loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
             loss_correlate = self.dno.noise_regularize_1d(current_latents, dim=1)
@@ -546,8 +546,8 @@ class MLD(BaseModel):
                   "joints_ref": joints_ref, "joints_rst": joints_rst}
 
         if 'hint' in batch:
-            hint = self.datamodule.denorm_spatial(batch['hint']) * batch['hint_mask']
-            rs_set['hint'] = hint
+            hint_3d = self.datamodule.denorm_spatial(batch['hint']) * batch['hint_mask']
+            rs_set['hint'] = hint_3d
             rs_set['hint_mask'] = batch['hint_mask']
 
         return rs_set

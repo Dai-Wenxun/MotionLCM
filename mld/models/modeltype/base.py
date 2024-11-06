@@ -142,7 +142,8 @@ class BaseModel(nn.Module):
                     diversity_times=self.cfg.TEST.DIVERSITY_TIMES,
                     dist_sync_on_step=self.cfg.METRIC.DIST_SYNC_ON_STEP)
             elif metric == 'ControlMetrics':
-                self.ControlMetrics = ControlMetrics(dist_sync_on_step=self.cfg.METRIC.DIST_SYNC_ON_STEP)
+                self.ControlMetrics = ControlMetrics(self.datamodule.name,
+                                                     dist_sync_on_step=self.cfg.METRIC.DIST_SYNC_ON_STEP)
             elif metric == 'PosMetrics':
                 self.PosMetrics = PosMetrics(dist_sync_on_step=self.cfg.METRIC.DIST_SYNC_ON_STEP)
             else:

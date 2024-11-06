@@ -215,34 +215,41 @@ def calculate_multimodality_np(activation: np.ndarray, multimodality_times: int)
 
 # Motion Control
 
-def calculate_skating_ratio(motions: torch.Tensor) -> tuple:
-    thresh_height = 0.05  # 10
+def calculate_skating_ratio(motions: torch.Tensor, dataset_name: str) -> tuple:
+    thresh_height = 0.05
     fps = 20.0
-    thresh_vel = 0.50  # 20 cm/s
+    thresh_vel = 0.50
     avg_window = 5  # frames
 
-    # 10 left, 11 right foot. XZ plane, y up
-    # motions [bs, 22, 3, max_len]
-    verts_feet = motions[:, [10, 11], :, :].detach().cpu().numpy()  # [bs, 2, 3, max_len]
-    verts_feet_plane_vel = np.linalg.norm(verts_feet[:, :, [0, 2], 1:] - verts_feet[:, :, [0, 2], :-1],
-                                          axis=2) * fps  # [bs, 2, max_len-1]
-    # [bs, 2, max_len-1]
-    vel_avg = uniform_filter1d(verts_feet_plane_vel, axis=-1, size=avg_window, mode='constant', origin=0)
+    # XZ plane, y up
+    # 10 left, 11 right foot. (HumanML3D)
+    # 15 left, 20 right foot. (KIT)
+    # motions [bsz, fs, 22 or 21, 3]
 
-    verts_feet_height = verts_feet[:, :, 1, :]  # [bs, 2, max_len]
+    if dataset_name == 'humanml3d':
+        foot_idx = [10, 11]
+    elif dataset_name == 'kit':
+        foot_idx = [15, 20]
+    else:
+        raise ValueError(f'Invalid Dataset: {dataset_name}')
+
+    verts_feet = motions[:, :, foot_idx, :].detach().cpu().numpy()  # [bsz, fs, 2, 3]
+    verts_feet_plane_vel = np.linalg.norm(verts_feet[:, 1:, :, [0, 2]] -
+                                          verts_feet[:, :-1, :, [0, 2]], axis=-1) * fps  # [bsz, fs-1, 2]
+    vel_avg = uniform_filter1d(verts_feet_plane_vel, axis=1, size=avg_window, mode='constant', origin=0)
+
+    verts_feet_height = verts_feet[:, :, :, 1]  # [bsz, fs, 2]
     # If feet touch ground in adjacent frames
-    feet_contact = np.logical_and((verts_feet_height[:, :, :-1] < thresh_height),
-                                  (verts_feet_height[:, :, 1:] < thresh_height))  # [bs, 2, max_len - 1]
+    feet_contact = np.logical_and((verts_feet_height[:, :-1, :] < thresh_height),
+                                  (verts_feet_height[:, 1:, :] < thresh_height))  # [bs, fs-1, 2]
     # skate velocity
     skate_vel = feet_contact * vel_avg
 
-    # it must both skating in the current frame
     skating = np.logical_and(feet_contact, (verts_feet_plane_vel > thresh_vel))
-    # and also skate in the windows of frames
     skating = np.logical_and(skating, (vel_avg > thresh_vel))
 
     # Both feet slide
-    skating = np.logical_or(skating[:, 0, :], skating[:, 1, :])  # [bs, max_len -1]
+    skating = np.logical_or(skating[:, :, 0], skating[:, :, 1])  # [bs, fs-1]
     skating_ratio = np.sum(skating, axis=1) / skating.shape[1]
 
     return skating_ratio, skate_vel
