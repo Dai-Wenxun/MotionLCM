@@ -189,6 +189,8 @@ class MLD(BaseModel):
 
             # Visualize
             if do_visualize:
+                control_error = torch.norm((joints_rst - hint_3d) * hint_mask, p=2, dim=-1)
+                control_error = control_error.sum(dim=[1, 2]) / hint_mask.mean(-1).sum(dim=[1, 2])
                 for batch_id in range(latents.shape[0]):
                     vis_id = self.dno.visualize_samples_done
                     metrics = {
@@ -197,7 +199,8 @@ class MLD(BaseModel):
                         'loss_diff': loss_diff[batch_id].item(),
                         'loss_correlate': loss_correlate[batch_id].item(),
                         'grad_norm': grad_norm[batch_id].item(),
-                        'lr': lr_scheduler.get_last_lr()[0]
+                        'lr': lr_scheduler.get_last_lr()[0],
+                        'control_error': control_error[batch_id].item()
                     }
                     for metric_name, metric_value in metrics.items():
                         self.dno.writer.add_scalar(f'Optimize_{vis_id+batch_id}/{metric_name}', metric_value, step)

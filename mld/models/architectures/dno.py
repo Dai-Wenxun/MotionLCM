@@ -33,15 +33,16 @@ class DNO(object):
         self.visualize_samples_done = 0
         assert self.visualize_samples > 0
         self.visualize_ske_steps = visualize_ske_steps
-        for step in visualize_ske_steps:
-            assert step <= max_train_steps
+        if len(visualize_ske_steps) > 0:
+            for step in visualize_ske_steps:
+                assert step <= max_train_steps
+            self.vis_dir = os.path.join(output_dir, 'vis_optimize')
+            os.makedirs(self.vis_dir)
 
         self.writer = None
         self.output_dir = output_dir
-        self.vis_dir = os.path.join(output_dir, 'vis_optimize')
         if self.visualize:
             self.writer = SummaryWriter(output_dir)
-        os.makedirs(self.vis_dir)
 
     @property
     def do_visualize(self):
