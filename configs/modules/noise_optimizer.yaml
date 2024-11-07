@@ -1,15 +1,16 @@
 noise_optimizer:
   target: mld.models.architectures.dno.DNO
   params:
+    optimize_before: true
+    optimize_after: false
     max_train_steps: 400
     learning_rate: 0.5
     lr_scheduler: 'cosine'
     lr_warmup_steps: 100
     clip_grad: true
-    loss_hint_type: 'l1_smooth'
-    loss_diff_penalty: 0
-    loss_correlate_penalty: 0
-    visualize: true
+    loss_hint_type: 'l2'
+    loss_diff_penalty: 0.000
+    loss_correlate_penalty: 1000
     visualize_samples: 'inf'
     visualize_ske_steps: []
     output_dir: ${output_dir}
