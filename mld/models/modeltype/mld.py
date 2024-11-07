@@ -156,7 +156,8 @@ class MLD(BaseModel):
             encoder_hidden_states: torch.Tensor,
             texts: list[str], lengths: list[int], mask: torch.Tensor,
             hint: torch.Tensor, hint_mask: torch.Tensor,
-            controlnet_cond: Optional[torch.Tensor] = None
+            controlnet_cond: Optional[torch.Tensor] = None,
+            feats_ref: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
 
         current_latents = latents.clone().requires_grad_(True)
@@ -168,6 +169,7 @@ class MLD(BaseModel):
             num_training_steps=self.dno.max_train_steps)
 
         do_visualize = self.dno.do_visualize
+        vis_id = self.dno.visualize_samples_done
         hint_3d = self.datamodule.denorm_spatial(hint) * hint_mask
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
             z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
@@ -190,9 +192,8 @@ class MLD(BaseModel):
             # Visualize
             if do_visualize:
                 control_error = torch.norm((joints_rst - hint_3d) * hint_mask, p=2, dim=-1)
-                control_error = control_error.sum(dim=[1, 2]) / hint_mask.mean(-1).sum(dim=[1, 2])
+                control_error = control_error.sum(dim=[1, 2]) / hint_mask.mean(dim=-1).sum(dim=[1, 2])
                 for batch_id in range(latents.shape[0]):
-                    vis_id = self.dno.visualize_samples_done
                     metrics = {
                         'loss': loss[batch_id].item(),
                         'loss_hint': loss_hint[batch_id].mean().item(),
@@ -207,13 +208,22 @@ class MLD(BaseModel):
 
                     if step in self.dno.visualize_ske_steps:
                         joints_rst_no_pad = joints_rst[batch_id][:lengths[batch_id]].detach().cpu().numpy()
-                        hint_no_pad = hint[batch_id][:lengths[batch_id]].detach().cpu().numpy()
+                        hint_3d_no_pad = hint_3d[batch_id][:lengths[batch_id]].detach().cpu().numpy()
                         plot_3d_motion(f'{self.dno.vis_dir}/vis_id_{vis_id+batch_id}_step_{step}.mp4',
-                                       joints=joints_rst_no_pad, title=texts[batch_id], hint=hint_no_pad,
+                                       joints=joints_rst_no_pad, title=texts[batch_id], hint=hint_3d_no_pad,
                                        fps=eval(f"self.cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE"))
 
             optimizer.step()
             lr_scheduler.step()
+
+        if feats_ref is not None and do_visualize:
+            joints_ref = self.feats2joints(feats_ref)
+            for batch_id in range(latents.shape[0]):
+                joints_ref_no_pad = joints_ref[batch_id][:lengths[batch_id]].detach().cpu().numpy()
+                hint_3d_no_pad = hint_3d[batch_id][:lengths[batch_id]].detach().cpu().numpy()
+                plot_3d_motion(f'{self.dno.vis_dir}/vis_id_{vis_id + batch_id}_ref.mp4',
+                               joints=joints_ref_no_pad, title=texts[batch_id], hint=hint_3d_no_pad,
+                               fps=eval(f"self.cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE"))
 
         self.dno.visualize_samples_done += latents.shape[0]
         return current_latents.detach()
@@ -499,11 +509,11 @@ class MLD(BaseModel):
         if 'hint' in batch:
             hint, hint_mask = batch['hint'], batch['hint_mask']
             with torch.enable_grad():
-                z = self._diffusion_reverse_with_optimize(
+                latents = self._diffusion_reverse_with_optimize(
                     latents, text_emb, texts, lengths, mask,
-                    hint, hint_mask, controlnet_cond=controlnet_cond)
-        else:
-            z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
+                    hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
+
+        z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
         diff_et = time.time()
         self.diffusion_times.append(diff_et - diff_st)
 
