@@ -105,10 +105,6 @@ class MLD(BaseModel):
             hint_mask = batch['hint'].sum(-1) != 0
             controlnet_cond = self.traj_encoder(batch['hint'], mask=hint_mask)
 
-
-
-
-
         hint = batch['hint'] if 'hint' in batch else None  # control signals
         if optimize:
             pass
@@ -150,8 +146,10 @@ class MLD(BaseModel):
 
         return pred_original_sample, pred_epsilon
 
-    def _diffusion_reverse_with_optimize(
+    @torch.enable_grad()
+    def _optimize_latents(
             self,
+            stage: str,
             latents: torch.Tensor,
             encoder_hidden_states: torch.Tensor,
             texts: list[str], lengths: list[int], mask: torch.Tensor,
@@ -172,7 +170,14 @@ class MLD(BaseModel):
         vis_id = self.dno.visualize_samples_done
         hint_3d = self.datamodule.denorm_spatial(hint) * hint_mask
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
-            z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
+
+            if stage == 'before':
+                z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
+            elif stage == 'after':
+                z_pred = current_latents
+            else:
+                raise ValueError(f'Invalid stage: {stage}')
+
             feats_rst = self.vae.decode(z_pred / self.cfg.model.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
@@ -204,12 +209,12 @@ class MLD(BaseModel):
                         'control_error': control_error[batch_id].item()
                     }
                     for metric_name, metric_value in metrics.items():
-                        self.dno.writer.add_scalar(f'Optimize_{vis_id+batch_id}/{metric_name}', metric_value, step)
+                        self.dno.writer.add_scalar(f'Optimize_{vis_id + batch_id}/{metric_name}', metric_value, step)
 
                     if step in self.dno.visualize_ske_steps:
                         joints_rst_no_pad = joints_rst[batch_id][:lengths[batch_id]].detach().cpu().numpy()
                         hint_3d_no_pad = hint_3d[batch_id][:lengths[batch_id]].detach().cpu().numpy()
-                        plot_3d_motion(f'{self.dno.vis_dir}/vis_id_{vis_id+batch_id}_step_{step}.mp4',
+                        plot_3d_motion(f'{self.dno.vis_dir}/vis_id_{vis_id + batch_id}_step_{step}.mp4',
                                        joints=joints_rst_no_pad, title=texts[batch_id], hint=hint_3d_no_pad,
                                        fps=eval(f"self.cfg.DATASET.{self.cfg.DATASET.NAME.upper()}.FRAME_RATE"))
 
@@ -431,7 +436,8 @@ class MLD(BaseModel):
                     cond_loss = (F.mse_loss(joints_rst, hint, reduction='none') * mask_hint).mean()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
                 elif self.vaeloss_type == 'sum':
-                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none').sum(-1, keepdims=True) * mask_hint).sum() / mask_hint.sum()
+                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none').sum(-1,
+                                                                                    keepdims=True) * mask_hint).sum() / mask_hint.sum()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
                 elif self.vaeloss_type == 'mask':
                     cond_loss = self.masked_l2(joints_rst, hint, mask_hint)
@@ -447,7 +453,8 @@ class MLD(BaseModel):
                     rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none') * mask_rot).mean()
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
                 elif self.vaeloss_type == 'sum':
-                    rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none').sum(-1, keepdims=True) * mask_rot).sum() / mask_rot.sum()
+                    rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none').sum(-1,
+                                                                                       keepdims=True) * mask_rot).sum() / mask_rot.sum()
                     rot_loss = rot_loss / self.nfeats
                     loss_dict['rot_loss'] = self.rot_ratio * rot_loss
                 elif self.vaeloss_type == 'mask':
@@ -474,6 +481,8 @@ class MLD(BaseModel):
         word_embs = batch["word_embs"]
         pos_ohot = batch["pos_ohot"]
         text_lengths = batch["text_len"]
+        hint = batch['hint'] if 'hint' in batch else None
+        hint_mask = batch['hint_mask'] if 'hint_mask' in batch else None
 
         start = time.time()
 
@@ -497,28 +506,33 @@ class MLD(BaseModel):
         if self.is_controlnet:
             assert 'hint' in batch
             hint_st = time.time()
-            hint, hint_mask = batch['hint'], batch['hint_mask']
-            hint = hint.view(hint.shape[0], hint.shape[1], -1)
-            hint_mask = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(-1) != 0
-            controlnet_cond = self.traj_encoder(hint, mask=hint_mask)
+            hint_reshaped = hint.view(hint.shape[0], hint.shape[1], -1)
+            hint_mask_reshaped = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(-1) != 0
+            controlnet_cond = self.traj_encoder(hint_reshaped, mask=hint_mask_reshaped)
             hint_et = time.time()
             self.traj_encoder_times.append(hint_et - hint_st)
 
         diff_st = time.time()
-        latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
-        if 'hint' in batch:
-            hint, hint_mask = batch['hint'], batch['hint_mask']
-            with torch.enable_grad():
-                latents = self._diffusion_reverse_with_optimize(
-                    latents, text_emb, texts, lengths, mask,
-                    hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
 
-        z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
+        latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
+
+        if self.dno.optimize_before:
+            latents = self._optimize_latents(
+                'before', latents, text_emb, texts, lengths, mask,
+                hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
+
+        latents = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
+
+        if self.dno.optimize_after:
+            latents = self._optimize_latents(
+                'after', latents, text_emb, texts, lengths, mask,
+                hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
+
         diff_et = time.time()
         self.diffusion_times.append(diff_et - diff_st)
 
         vae_st = time.time()
-        feats_rst = self.vae.decode(z / self.cfg.model.vae_scale_factor, mask)
+        feats_rst = self.vae.decode(latents / self.cfg.model.vae_scale_factor, mask)
         vae_et = time.time()
         self.vae_decode_times.append(vae_et - vae_st)
 
