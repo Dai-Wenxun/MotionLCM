@@ -8,6 +8,8 @@ from torch.utils.tensorboard import SummaryWriter
 class DNO(object):
     def __init__(
             self,
+            optimize_before: bool,
+            optimize_after: bool,
             max_train_steps: int,
             learning_rate: float,
             lr_scheduler: str,
@@ -16,12 +18,13 @@ class DNO(object):
             loss_hint_type: str,
             loss_diff_penalty: float,
             loss_correlate_penalty: float,
-            visualize: bool,
             visualize_samples: int,
             visualize_ske_steps: list[int],
             output_dir: str
     ) -> None:
 
+        self.optimize_before = optimize_before
+        self.optimize_after = optimize_after
         self.max_train_steps = max_train_steps
         self.learning_rate = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -40,10 +43,9 @@ class DNO(object):
         else:
             raise ValueError(f'Invalid loss type: {loss_hint_type}')
 
-        self.visualize = visualize
         self.visualize_samples = float('inf') if visualize_samples == 'inf' else visualize_samples
+        assert self.visualize_samples >= 0
         self.visualize_samples_done = 0
-        assert self.visualize_samples > 0
         self.visualize_ske_steps = visualize_ske_steps
         if len(visualize_ske_steps) > 0:
             for step in visualize_ske_steps:
@@ -53,12 +55,12 @@ class DNO(object):
 
         self.writer = None
         self.output_dir = output_dir
-        if self.visualize:
+        if self.visualize_samples > 0:
             self.writer = SummaryWriter(output_dir)
 
     @property
     def do_visualize(self):
-        return self.visualize and self.visualize_samples_done < self.visualize_samples
+        return self.visualize_samples_done < self.visualize_samples
 
     @staticmethod
     def noise_regularize_1d(noise: torch.Tensor, stop_at: int = 2, dim: int = 1) -> torch.Tensor:
