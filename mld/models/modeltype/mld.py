@@ -216,7 +216,7 @@ class MLD(BaseModel):
             optimizer.step()
             lr_scheduler.step()
 
-        if feats_ref is not None and do_visualize:
+        if feats_ref is not None and do_visualize and len(self.dno.visualize_ske_steps) > 0:
             joints_ref = self.feats2joints(feats_ref)
             for batch_id in range(latents.shape[0]):
                 joints_ref_no_pad = joints_ref[batch_id][:lengths[batch_id]].detach().cpu().numpy()

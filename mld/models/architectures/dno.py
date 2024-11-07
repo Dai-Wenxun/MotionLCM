@@ -29,7 +29,7 @@ class DNO(object):
         self.loss_correlate_penalty = loss_correlate_penalty
 
         self.visualize = visualize
-        self.visualize_samples = visualize_samples
+        self.visualize_samples = float('inf') if visualize_samples == 'inf' else visualize_samples
         self.visualize_samples_done = 0
         assert self.visualize_samples > 0
         self.visualize_ske_steps = visualize_ske_steps
