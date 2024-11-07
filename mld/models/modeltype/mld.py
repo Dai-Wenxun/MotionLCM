@@ -303,25 +303,18 @@ class MLD(BaseModel):
         return latents
 
     def _diffusion_process(self, latents: torch.Tensor, encoder_hidden_states: torch.Tensor,
-                           hint: torch.Tensor = None) -> dict:
+                           hint: Optional[torch.Tensor] = None, hint_mask: Optional[torch.Tensor] = None) -> dict:
 
         controlnet_cond = None
         if self.is_controlnet:
-            hint_mask = hint.sum(-1) != 0
-            controlnet_cond = self.traj_encoder(hint, mask=hint_mask)
+            assert hint is not None
+            hint_reshaped = hint.view(hint.shape[0], hint.shape[1], -1)
+            hint_mask_reshaped = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(-1) != 0
+            controlnet_cond = self.traj_encoder(hint_reshaped, mask=hint_mask_reshaped)
 
-        timestep_cond = None
-        if self.denoiser.time_cond_proj_dim is not None:
-            guidance_scale_tensor = torch.tensor(self.guidance_scale - 1).repeat(latents.shape[0])
-            timestep_cond = get_guidance_scale_embedding(
-                guidance_scale_tensor, embedding_dim=self.denoiser.time_cond_proj_dim
-            ).to(device=latents.device, dtype=latents.dtype)
-
-        # Sample noise that we'll add to the latents
         # [batch_size, n_token, latent_dim]
         noise = torch.randn_like(latents)
         bsz = latents.shape[0]
-        # Sample a random timestep for each motion
         timesteps = torch.randint(
             0,
             self.scheduler.config.num_train_timesteps,
@@ -329,7 +322,6 @@ class MLD(BaseModel):
             device=latents.device
         )
         timesteps = timesteps.long()
-        # Add noise to the latents according to the noise magnitude at each timestep
         noisy_latents = self.scheduler.add_noise(latents.clone(), noise, timesteps)
 
         controlnet_residuals = None
@@ -338,14 +330,12 @@ class MLD(BaseModel):
             controlnet_residuals, router_loss_controlnet = self.controlnet(
                 sample=noisy_latents,
                 timestep=timesteps,
-                timestep_cond=timestep_cond,
                 encoder_hidden_states=encoder_hidden_states,
                 controlnet_cond=controlnet_cond)
 
         model_output, router_loss = self.denoiser(
             sample=noisy_latents,
             timestep=timesteps,
-            timestep_cond=timestep_cond,
             encoder_hidden_states=encoder_hidden_states,
             controlnet_residuals=controlnet_residuals)
 
@@ -372,26 +362,21 @@ class MLD(BaseModel):
     def train_diffusion_forward(self, batch: dict) -> dict:
         feats_ref = batch["motion"]
         lengths = batch["length"]
+        mask = batch['mask']
+        hint = batch['hint'] if 'hint' in batch else None
+        hint_mask = batch['hint_mask'] if 'hint_mask' in batch else None
 
-        # motion encode
         with torch.no_grad():
-            padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-            mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
             z, dist = self.vae.encode(feats_ref, mask)
             z = z * self.cfg.model.vae_scale_factor
 
         text = batch["text"]
-        # classifier free guidance: randomly drop text during training
         text = [
             "" if np.random.rand(1) < self.guidance_uncondp else i
             for i in text
         ]
-        # text encode
-        cond_emb = self.text_encoder(text)
-
-        # diffusion process return with noise and noise_pred
-        hint = batch['hint'] if 'hint' in batch else None  # control signals
-        n_set = self._diffusion_process(z, cond_emb, hint)
+        text_emb = self.text_encoder(text)
+        n_set = self._diffusion_process(z, text_emb, hint=hint, hint_mask=hint_mask)
 
         loss_dict = dict()
 
@@ -516,14 +501,14 @@ class MLD(BaseModel):
 
         latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
 
-        if self.dno.optimize_before:
+        if hint is not None and self.dno.optimize_before:
             latents = self._optimize_latents(
                 'before', latents, text_emb, texts, lengths, mask,
                 hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
 
         latents = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
 
-        if self.dno.optimize_after:
+        if hint is not None and self.dno.optimize_after:
             latents = self._optimize_latents(
                 'after', latents, text_emb, texts, lengths, mask,
                 hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
