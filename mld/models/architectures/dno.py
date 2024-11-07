@@ -1,6 +1,7 @@
 import os
 
 import torch
+import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -12,6 +13,7 @@ class DNO(object):
             lr_scheduler: str,
             lr_warmup_steps: int,
             clip_grad: bool,
+            loss_hint_type: str,
             loss_diff_penalty: float,
             loss_correlate_penalty: float,
             visualize: bool,
@@ -25,8 +27,18 @@ class DNO(object):
         self.lr_scheduler = lr_scheduler
         self.lr_warmup_steps = lr_warmup_steps
         self.clip_grad = clip_grad
+        self.loss_hint_type = loss_hint_type
         self.loss_diff_penalty = loss_diff_penalty
         self.loss_correlate_penalty = loss_correlate_penalty
+
+        if loss_hint_type == 'l1':
+            self.loss_hint_func = F.l1_loss
+        elif loss_hint_type == 'l1_smooth':
+            self.loss_hint_func = F.smooth_l1_loss
+        elif loss_hint_type == 'l2':
+            self.loss_hint_func = F.mse_loss
+        else:
+            raise ValueError(f'Invalid loss type: {loss_hint_type}')
 
         self.visualize = visualize
         self.visualize_samples = float('inf') if visualize_samples == 'inf' else visualize_samples

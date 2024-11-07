@@ -6,6 +6,7 @@ noise_optimizer:
     lr_scheduler: 'cosine'
     lr_warmup_steps: 100
     clip_grad: true
+    loss_hint_type: 'l1_smooth'
     loss_diff_penalty: 0
     loss_correlate_penalty: 0
     visualize: true

@@ -176,7 +176,7 @@ class MLD(BaseModel):
             feats_rst = self.vae.decode(z_pred / self.cfg.model.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
-            loss_hint = F.smooth_l1_loss(joints_rst, hint_3d, reduction='none') * hint_mask
+            loss_hint = self.dno.loss_hint_func(joints_rst, hint_3d, reduction='none') * hint_mask
             loss_hint = loss_hint.sum(dim=[1, 2, 3]) / hint_mask.sum(dim=[1, 2, 3])
             loss_diff = (current_latents - latents).norm(p=2, dim=[1, 2])
             loss_correlate = self.dno.noise_regularize_1d(current_latents, dim=1)
