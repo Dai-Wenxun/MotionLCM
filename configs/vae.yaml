@@ -50,6 +50,14 @@ DATASET:
     FRAME_RATE: 20.0
     UNIT_LEN: 4
     ROOT: './datasets/humanml3d'
+    CONTROL_ARGS:
+      CONTROL: false
+      TEMPORAL: false
+      TRAIN_JOINTS: [0]
+      TEST_JOINTS: [0]
+      TRAIN_DENSITY: 'random'
+      TEST_DESITY: 100
+      MEAN_STD_PATH: './datasets/humanml_spatial_norm'
   SAMPLER:
     MAX_LEN: 200
     MIN_LEN: 40
