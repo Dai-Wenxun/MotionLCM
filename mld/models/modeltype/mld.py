@@ -474,10 +474,13 @@ class MLD(BaseModel):
         if self.datamodule.is_mm:
             texts = texts * self.cfg.TEST.MM_NUM_REPEATS
             feats_ref = feats_ref.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
+            mask = mask.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
             lengths = lengths * self.cfg.TEST.MM_NUM_REPEATS
             word_embs = word_embs.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
             pos_ohot = pos_ohot.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
             text_lengths = text_lengths.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
+            hint = hint and hint.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
+            hint_mask = hint_mask and hint_mask.repeat_interleave(self.cfg.TEST.MM_NUM_REPEATS, dim=0)
 
         if self.do_classifier_free_guidance:
             texts = texts + [""] * len(texts)
