@@ -193,9 +193,6 @@ def main():
     logger.info(f'Loading pretrained model for [target_unet]')
     logger.info(target_unet.load_state_dict(teacher_unet.state_dict(), strict=False))
 
-    # Only evaluate the online network
-    base_model.denoiser = unet
-
     unet = unet.to(device)
     target_unet = target_unet.to(device)
     target_unet.requires_grad_(False)
@@ -242,8 +239,9 @@ def main():
     global_step = 0
 
     @torch.no_grad()
-    def validation():
-        base_model.eval()
+    def validation(ema: bool = False) -> tuple:
+        base_model.denoiser = target_unet if ema else unet
+        base_model.denoiser.eval()
         for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
             base_model.allsplit_step(split='test', batch=val_batch)
@@ -252,14 +250,17 @@ def main():
         min_val_fid = metrics['Metrics/FID']
         print_table(f'Validation@Step-{global_step}', metrics)
         for k, v in metrics.items():
+            k = k + '_EMA' if ema else k
             if cfg.vis == "tb":
                 writer.add_scalar(k, v, global_step=global_step)
             elif cfg.vis == "swanlab":
                 writer.log({k: v}, step=global_step)
-        base_model.train()
+        base_model.denoiser.train()
+        base_model.denoiser = None
         return max_val_rp1, min_val_fid
 
     max_rp1, min_fid = validation()
+    validation(ema=True)
 
     progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
     while True:
@@ -405,6 +406,7 @@ def main():
 
             if global_step % cfg.TRAIN.validation_steps == 0:
                 cur_rp1, cur_fid = validation()
+                validation(ema=True)
                 if cur_rp1 > max_rp1:
                     max_rp1 = cur_rp1
                     save_path = os.path.join(cfg.output_dir, 'checkpoints',
