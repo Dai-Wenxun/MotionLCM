@@ -161,10 +161,10 @@ def main():
     train_dataloader = dataset.train_dataloader()
     val_dataloader = dataset.val_dataloader()
 
-    logger.info(f"Loading pretrained model: {cfg.TRAIN.PRETRAINED}")
     state_dict = torch.load(cfg.TRAIN.PRETRAINED, map_location="cpu")["state_dict"]
     base_model = MLD(cfg, dataset)
-    base_model.load_state_dict(state_dict)
+    logger.info(f"Loading pretrained model: {cfg.TRAIN.PRETRAINED}")
+    logger.info(base_model.load_state_dict(state_dict))
 
     scheduler = base_model.scheduler
     alpha_schedule = torch.sqrt(scheduler.alphas_cumprod)
@@ -187,9 +187,11 @@ def main():
     # Apply CFG here (Important!!!)
     cfg.model.denoiser.params.time_cond_proj_dim = cfg.TRAIN.unet_time_cond_proj_dim
     unet = instantiate_from_config(cfg.model.denoiser)
-    unet.load_state_dict(teacher_unet.state_dict(), strict=False)
+    logger.info(f'Loading pretrained model for [unet]')
+    logger.info(unet.load_state_dict(teacher_unet.state_dict(), strict=False))
     target_unet = instantiate_from_config(cfg.model.denoiser)
-    target_unet.load_state_dict(teacher_unet.state_dict(), strict=False)
+    logger.info(f'Loading pretrained model for [target_unet]')
+    logger.info(target_unet.load_state_dict(teacher_unet.state_dict(), strict=False))
 
     # Only evaluate the online network
     base_model.denoiser = unet
