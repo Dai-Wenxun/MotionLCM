@@ -67,7 +67,7 @@ def main():
     if cfg.TRAIN.PRETRAINED:
         logger.info(f"Loading pre-trained model: {cfg.TRAIN.PRETRAINED}")
         state_dict = torch.load(cfg.TRAIN.PRETRAINED, map_location="cpu")["state_dict"]
-        model.load_state_dict(state_dict, strict=False)
+        logger.info(model.load_state_dict(state_dict))
 
     logger.info("learning_rate: {}".format(cfg.TRAIN.learning_rate))
     optimizer = torch.optim.AdamW(
