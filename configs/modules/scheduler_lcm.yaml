@@ -8,3 +8,4 @@ scheduler:
     beta_schedule: 'scaled_linear'
     clip_sample: false
     set_alpha_to_one: false
+    original_inference_steps: 10
