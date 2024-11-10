@@ -4,7 +4,7 @@ TEST_FOLDER: './experiments_t2m_test'
 NAME: 'motionlcm_humanml'
 
 TRAIN:
-  BATCH_SIZE: 256
+  BATCH_SIZE: 128
   SPLIT: 'train'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
@@ -29,9 +29,9 @@ TRAIN:
   # Latent Consistency Distillation Specific Arguments
   w_min: 5.0
   w_max: 15.0
-  num_ddim_timesteps: 50
+  num_ddim_timesteps: 10
   loss_type: 'huber'
-  huber_c: 0.001
+  huber_c: 0.5
   unet_time_cond_proj_dim: 256
   ema_decay: 0.95
 

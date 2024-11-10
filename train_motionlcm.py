@@ -241,7 +241,7 @@ def main():
     @torch.no_grad()
     def validation(ema: bool = False) -> tuple:
         base_model.denoiser = target_unet if ema else unet
-        base_model.denoiser.eval()
+        base_model.eval()
         for val_batch in tqdm(val_dataloader):
             val_batch = move_batch_to_device(val_batch, device)
             base_model.allsplit_step(split='test', batch=val_batch)
@@ -255,7 +255,7 @@ def main():
                 writer.add_scalar(k, v, global_step=global_step)
             elif cfg.vis == "swanlab":
                 writer.log({k: v}, step=global_step)
-        base_model.denoiser.train()
+        base_model.train()
         base_model.denoiser = None
         return max_val_rp1, min_val_fid
 
