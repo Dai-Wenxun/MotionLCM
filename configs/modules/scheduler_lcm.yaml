@@ -1,6 +1,10 @@
 scheduler:
-  target: diffusers.LCMScheduler
-  num_inference_timesteps: 1
+  target: mld.models.schedulers.scheduling_lcm.LCMScheduler
+  num_inference_timesteps: 4
+  cfg_step_map:
+    1: 8.0
+    2: 12.5
+    4: 13.5
   params:
     num_train_timesteps: 1000
     beta_start: 0.00085
@@ -9,3 +13,7 @@ scheduler:
     clip_sample: false
     set_alpha_to_one: false
     original_inference_steps: 10
+    timesteps_step_map:
+      1: [799]
+      2: [699, 299]
+      4: [699, 399, 299, 299]

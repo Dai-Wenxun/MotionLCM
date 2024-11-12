@@ -34,6 +34,11 @@ class MLD(BaseModel):
         self.guidance_uncondp = cfg.model.guidance_uncondp
         self.datamodule = datamodule
 
+        if cfg.model.guidance_scale is None:
+            s_cfg = cfg.model.scheduler
+            self.guidance_scale = s_cfg.cfg_step_map[s_cfg.num_inference_timesteps]
+            logger.info(f'Guidance Scale set as {self.guidance_scale}')
+
         self.text_encoder = instantiate_from_config(cfg.model.text_encoder)
         self.vae = instantiate_from_config(cfg.model.motion_vae)
         self.denoiser = instantiate_from_config(cfg.model.denoiser)
