@@ -80,7 +80,6 @@ model:
   latent_dim: [16, 32]
   guidance_scale: 7.5
   guidance_uncondp: 0.1
-  vae_scale_factor: 1.0
 
   t2m_textencoder:
     dim_word: 300

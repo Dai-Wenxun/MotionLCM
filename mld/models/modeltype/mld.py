@@ -53,8 +53,9 @@ class MLD(BaseModel):
         self.configure_metrics()
 
         self.feats2joints = datamodule.feats2joints
+        self.vae_scale_factor = cfg.model.get("vae_scale_factor", 1.0)
 
-        logger.info(f"vae_scale_factor: {self.cfg.model.vae_scale_factor}")
+        logger.info(f"vae_scale_factor: {self.vae_scale_factor}")
         logger.info(f"prediction_type: {self.scheduler.config.prediction_type}")
 
         self.is_controlnet = cfg.model.get('is_controlnet', False)
@@ -121,7 +122,7 @@ class MLD(BaseModel):
                 mask = lengths_to_mask(lengths, text_emb.device, max_len=padding_to_max_length)
             else:
                 mask = lengths_to_mask(lengths, text_emb.device)
-            z = z / self.cfg.model.vae_scale_factor
+            z = z / self.vae_scale_factor
             feats_rst = self.vae.decode(z, mask)
 
         joints = self.feats2joints(feats_rst.detach().cpu())
@@ -183,7 +184,7 @@ class MLD(BaseModel):
             else:
                 raise ValueError(f'Invalid stage: {stage}')
 
-            feats_rst = self.vae.decode(z_pred / self.cfg.model.vae_scale_factor, mask)
+            feats_rst = self.vae.decode(z_pred / self.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
             loss_hint = self.dno.loss_hint_func(joints_rst, hint_3d, reduction='none') * hint_mask
@@ -372,7 +373,7 @@ class MLD(BaseModel):
 
         with torch.no_grad():
             z, dist = self.vae.encode(feats_ref, mask)
-            z = z * self.cfg.model.vae_scale_factor
+            z = z * self.vae_scale_factor
 
         text = batch["text"]
         text = [
@@ -410,7 +411,7 @@ class MLD(BaseModel):
             loss_dict['router_loss'] = torch.tensor(0., device=diff_loss.device)
 
         if self.is_controlnet and self.vaeloss:
-            z_pred = n_set['sample_pred'] / self.cfg.model.vae_scale_factor
+            z_pred = n_set['sample_pred'] / self.vae_scale_factor
             feats_rst = self.vae.decode(z_pred, mask)
             joints_rst = self.feats2joints(feats_rst)
             joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], -1)
@@ -524,7 +525,7 @@ class MLD(BaseModel):
         self.diffusion_times.append(diff_et - diff_st)
 
         vae_st = time.time()
-        feats_rst = self.vae.decode(latents / self.cfg.model.vae_scale_factor, mask)
+        feats_rst = self.vae.decode(latents / self.vae_scale_factor, mask)
         vae_et = time.time()
         self.vae_decode_times.append(vae_et - vae_st)
 
