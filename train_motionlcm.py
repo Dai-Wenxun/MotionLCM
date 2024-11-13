@@ -21,7 +21,6 @@ from mld.config import parse_args, instantiate_from_config
 from mld.data.get_data import get_dataset
 from mld.models.modeltype.mld import MLD
 from mld.utils.utils import print_table, set_seed, move_batch_to_device
-from mld.utils.temos_utils import lengths_to_mask
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -271,13 +270,11 @@ def main():
         for step, batch in enumerate(train_dataloader):
             batch = move_batch_to_device(batch, device)
             feats_ref = batch["motion"]
-            lengths = batch["length"]
             text = batch['text']
+            mask = batch['mask']
 
             # Encode motions to latents
             with torch.no_grad():
-                padding_to_max_length = feats_ref.shape[1] if cfg.DATASET.PADDING_TO_MAX else None
-                mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
                 latents, _ = vae.encode(feats_ref, mask)
 
             prompt_embeds = text_encoder(text)
