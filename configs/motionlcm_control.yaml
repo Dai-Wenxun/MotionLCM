@@ -77,17 +77,12 @@ METRIC:
   TYPE: ['TM2TMetrics', 'ControlMetrics']
 
 model:
-  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_lcm', 'traj_encoder']
+  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_lcm', 'traj_encoder', 'noise_optimizer']
   latent_dim: [16, 32]
   guidance_scale: 'dynamic'
 
   # ControlNet Args
   is_controlnet: true
-  is_controlnet_temporal: false
-  training_control_joint: [0]
-  testing_control_joint: [0]
-  training_density: 'random'
-  testing_density: 100
   control_scale: 1.0
   vaeloss: true
   vaeloss_type: 'sum'
