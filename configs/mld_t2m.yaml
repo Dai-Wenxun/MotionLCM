@@ -35,7 +35,7 @@ VAL:
   NUM_WORKERS: 12
 
 TEST:
-  BATCH_SIZE: 1
+  BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
@@ -80,7 +80,6 @@ model:
   latent_dim: [16, 32]
   guidance_scale: 7.5
   guidance_uncondp: 0.1
-  is_controlnet: false
   vae_scale_factor: 1.0
 
   t2m_textencoder:
