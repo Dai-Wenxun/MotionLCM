@@ -84,9 +84,7 @@ METRIC:
 model:
   target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_lcm', 'noise_optimizer']
   latent_dim: [16, 32]
-  guidance_scale: null
-  guidance_uncondp: 0.0
-  is_controlnet: false
+  guidance_scale: 'dynamic'
   vae_scale_factor: 1.0
 
   t2m_textencoder:

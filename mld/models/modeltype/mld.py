@@ -31,12 +31,12 @@ class MLD(BaseModel):
         self.njoints = cfg.DATASET.NJOINTS
         self.latent_dim = cfg.model.latent_dim
         self.guidance_scale = cfg.model.guidance_scale
-        self.guidance_uncondp = cfg.model.guidance_uncondp
+        self.guidance_uncondp = cfg.model.get('guidance_uncondp', 0.0)
         self.datamodule = datamodule
 
-        if cfg.model.guidance_scale is None:
+        if cfg.model.guidance_scale == 'dynamic':
             s_cfg = cfg.model.scheduler
-            self.guidance_scale = s_cfg.cfg_step_map[s_cfg.num_inference_timesteps]
+            self.guidance_scale = s_cfg.cfg_step_map[s_cfg.num_inference_steps]
             logger.info(f'Guidance Scale set as {self.guidance_scale}')
 
         self.text_encoder = instantiate_from_config(cfg.model.text_encoder)
@@ -57,7 +57,7 @@ class MLD(BaseModel):
         logger.info(f"vae_scale_factor: {self.cfg.model.vae_scale_factor}")
         logger.info(f"prediction_type: {self.scheduler.config.prediction_type}")
 
-        self.is_controlnet = cfg.model.is_controlnet
+        self.is_controlnet = cfg.model.get('is_controlnet', False)
         if self.is_controlnet:
             c_cfg = self.cfg.model.denoiser.copy()
             c_cfg['params']['is_controlnet'] = True
@@ -247,8 +247,7 @@ class MLD(BaseModel):
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
         # set timesteps
-        self.scheduler.set_timesteps(
-            self.cfg.model.scheduler.num_inference_timesteps)
+        self.scheduler.set_timesteps(self.cfg.model.scheduler.num_inference_steps)
         timesteps = self.scheduler.timesteps.to(encoder_hidden_states.device)
         # prepare extra kwargs for the scheduler step, since not all schedulers have the same signature
         # eta (η) is only used with the DDIMScheduler, and between [0, 1]
