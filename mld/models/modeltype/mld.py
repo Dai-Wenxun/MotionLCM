@@ -89,10 +89,10 @@ class MLD(BaseModel):
         logger.info(f'Denoiser: {count_parameters(self.denoiser)}M')
 
         if self.is_controlnet:
-            vae = count_parameters(self.traj_encoder)
+            traj_encoder = count_parameters(self.traj_encoder)
             controlnet = count_parameters(self.controlnet)
             logger.info(f'ControlNet: {controlnet}M')
-            logger.info(f'Spatial VAE: {vae}M')
+            logger.info(f'Trajectory Encoder: {traj_encoder}M')
 
     def forward(self, batch: dict, optimize: bool = False) -> tuple:
         texts = batch["text"]
@@ -122,8 +122,7 @@ class MLD(BaseModel):
                 mask = lengths_to_mask(lengths, text_emb.device, max_len=padding_to_max_length)
             else:
                 mask = lengths_to_mask(lengths, text_emb.device)
-            z = z / self.vae_scale_factor
-            feats_rst = self.vae.decode(z, mask)
+            feats_rst = self.vae.decode(z / self.vae_scale_factor, mask)
 
         joints = self.feats2joints(feats_rst.detach().cpu())
         joints = remove_padding(joints, lengths)
@@ -178,7 +177,8 @@ class MLD(BaseModel):
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
 
             if stage == 'before':
-                z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond)
+                z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states,
+                                                 controlnet_cond=controlnet_cond)
             elif stage == 'after':
                 z_pred = current_latents
             else:
@@ -272,23 +272,13 @@ class MLD(BaseModel):
 
             controlnet_residuals = None
             if self.is_controlnet:
-                if self.do_classifier_free_guidance:
-                    controlnet_prompt_embeds = encoder_hidden_states.chunk(2)[1]
-                else:
-                    controlnet_prompt_embeds = encoder_hidden_states
-
                 controlnet_residuals = self.controlnet(
-                    latents,
-                    t,
+                    sample=latent_model_input,
+                    timestep=t,
                     timestep_cond=timestep_cond,
-                    encoder_hidden_states=controlnet_prompt_embeds,
+                    encoder_hidden_states=encoder_hidden_states,
                     controlnet_cond=controlnet_cond)[0]
-
-                if self.do_classifier_free_guidance:
-                    controlnet_residuals = [torch.cat([torch.zeros_like(d), d * self.control_scale], dim=1)
-                                            for d in controlnet_residuals]
-                else:
-                    controlnet_residuals = [d * self.control_scale for d in controlnet_residuals]
+                controlnet_residuals = [d * self.control_scale for d in controlnet_residuals]
 
             # predict the noise residual
             model_output = self.denoiser(
@@ -411,26 +401,16 @@ class MLD(BaseModel):
             loss_dict['router_loss'] = torch.tensor(0., device=diff_loss.device)
 
         if self.is_controlnet and self.vaeloss:
-            z_pred = n_set['sample_pred'] / self.vae_scale_factor
-            feats_rst = self.vae.decode(z_pred, mask)
+            feats_rst = self.vae.decode(n_set['sample_pred'] / self.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
-            joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], -1)
             joints_rst = self.datamodule.norm_spatial(joints_rst)
-            joints_rst = joints_rst.view(joints_rst.shape[0], joints_rst.shape[1], self.njoints, 3)
-            hint = batch['hint']
-            hint = hint.view(hint.shape[0], hint.shape[1], self.njoints, 3)
-            mask_hint = hint.sum(dim=-1, keepdim=True) != 0
-
             if self.cond_ratio != 0:
-                if self.vaeloss_type == 'mean':
-                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none') * mask_hint).mean()
-                    loss_dict['cond_loss'] = self.cond_ratio * cond_loss
-                elif self.vaeloss_type == 'sum':
-                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none').sum(-1,
-                                                                                    keepdims=True) * mask_hint).sum() / mask_hint.sum()
+                hint_mask = hint_mask.sum(-1, keepdim=True) != 0
+                if self.vaeloss_type == 'sum':
+                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none').sum(-1, keepdims=True) * hint_mask).sum() / hint_mask.sum()
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
                 elif self.vaeloss_type == 'mask':
-                    cond_loss = self.masked_l2(joints_rst, hint, mask_hint)
+                    cond_loss = self.masked_l2(joints_rst, hint, hint_mask)
                     loss_dict['cond_loss'] = self.cond_ratio * cond_loss
                 else:
                     raise ValueError(f'Unsupported vaeloss_type: {self.vaeloss_type}')
@@ -438,20 +418,7 @@ class MLD(BaseModel):
                 loss_dict['cond_loss'] = torch.tensor(0., device=diff_loss.device)
 
             if self.rot_ratio != 0:
-                mask_rot = lengths_to_mask(lengths, feats_rst.device).unsqueeze(-1)
-                if self.vaeloss_type == 'mean':
-                    rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none') * mask_rot).mean()
-                    loss_dict['rot_loss'] = self.rot_ratio * rot_loss
-                elif self.vaeloss_type == 'sum':
-                    rot_loss = (F.mse_loss(feats_rst, feats_ref, reduction='none').sum(-1,
-                                                                                       keepdims=True) * mask_rot).sum() / mask_rot.sum()
-                    rot_loss = rot_loss / self.nfeats
-                    loss_dict['rot_loss'] = self.rot_ratio * rot_loss
-                elif self.vaeloss_type == 'mask':
-                    rot_loss = self.masked_l2(feats_rst, feats_ref, mask_rot)
-                    loss_dict['rot_loss'] = self.rot_ratio * rot_loss
-                else:
-                    raise ValueError(f'Unsupported vaeloss_type: {self.vaeloss_type}')
+                pass
             else:
                 loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
 

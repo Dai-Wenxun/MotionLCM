@@ -2,7 +2,6 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions.distribution import Distribution
 
 from mld.models.operator.attention import (
@@ -13,7 +12,6 @@ from mld.models.operator.attention import (
     TransformerEncoder,
     TransformerEncoderLayer
 )
-from mld.models.operator.conv import ResEncoder, ResDecoder
 from mld.models.operator.position_encoding import build_position_encoding
 
 

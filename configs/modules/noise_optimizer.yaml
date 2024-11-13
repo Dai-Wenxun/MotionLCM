@@ -1,7 +1,7 @@
 noise_optimizer:
   target: mld.models.architectures.dno.DNO
   params:
-    optimize_before: true
+    optimize_before: false
     optimize_after: false
     max_train_steps: 400
     learning_rate: 0.5

@@ -23,8 +23,6 @@ denoiser:
     add_mem_pos: true
     force_pre_post_proj: true
     text_act_fn: null
-    moe: false
-    moe_num_experts: 4
-    moe_topk: 2
-    moe_loss_weight: 1e-2
-    moe_jitter_noise: null
+    zero_init_cond: true
+    controlnet_embed_dim: 256
+    controlnet_act_fn: 'silu'

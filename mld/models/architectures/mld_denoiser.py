@@ -11,7 +11,6 @@ from mld.models.operator.attention import (SkipTransformerEncoder,
                                            TransformerEncoder,
                                            TransformerEncoderLayer)
 from mld.models.operator.moe import MoeTransformerEncoderLayer, MoeTransformerDecoderLayer
-from mld.models.operator.conv import ResConv1DBlock
 from mld.models.operator.utils import get_clones, get_activation_fn, zero_module
 from mld.models.operator.position_encoding import build_position_encoding
 
@@ -52,14 +51,17 @@ class MldDenoiser(nn.Module):
                  add_mem_pos: bool = True,
                  force_pre_post_proj: bool = False,
                  text_act_fn: str = 'relu',
+                 time_cond_proj_dim: Optional[int] = None,
+                 zero_init_cond: bool = True,
+                 is_controlnet: bool = False,
+                 controlnet_embed_dim: Optional[int] = None,
+                 controlnet_act_fn: str = 'silu',
                  moe: bool = False,
                  moe_num_experts: int = 4,
                  moe_topk: int = 2,
                  moe_loss_weight: float = 1e-2,
-                 moe_jitter_noise: Optional[float] = None,
-                 time_cond_proj_dim: Optional[int] = None,
-                 zero_init_cond: bool = True,
-                 is_controlnet: bool = False) -> None:
+                 moe_jitter_noise: Optional[float] = None
+                 ) -> None:
         super(MldDenoiser, self).__init__()
 
         self.latent_dim = latent_dim[-1] if hidden_dim is None else hidden_dim
@@ -114,14 +116,17 @@ class MldDenoiser(nn.Module):
         else:
             raise ValueError(f"Not supported architecture: {self.arch}!")
 
-        # TODO
         self.is_controlnet = is_controlnet
         if self.is_controlnet:
-            self.controlnet_cond_embedding = nn.Sequential(
-                nn.Linear(self.latent_dim, self.latent_dim),
-                nn.Linear(self.latent_dim, self.latent_dim),
-                zero_module(nn.Linear(self.latent_dim, self.latent_dim))
-            )
+            embed_dim = controlnet_embed_dim if controlnet_embed_dim is not None else self.latent_dim
+            modules = [
+                nn.Linear(latent_dim[-1], embed_dim),
+                get_activation_fn(controlnet_act_fn) if controlnet_act_fn else None,
+                nn.Linear(embed_dim, embed_dim),
+                get_activation_fn(controlnet_act_fn) if controlnet_act_fn else None,
+                zero_module(nn.Linear(embed_dim, latent_dim[-1]))
+            ]
+            self.controlnet_cond_embedding = nn.Sequential(*[m for m in modules if m is not None])
 
             self.controlnet_down_mid_blocks = nn.ModuleList([
                 zero_module(nn.Linear(self.latent_dim, self.latent_dim)) for _ in range(num_layers)])
@@ -134,14 +139,14 @@ class MldDenoiser(nn.Module):
                 controlnet_cond: Optional[torch.Tensor] = None,
                 controlnet_residuals: Optional[list[torch.Tensor]] = None
                 ) -> tuple:
-        # 0. dimension matching (pre)
+
+        # 0. check if controlnet
+        if self.is_controlnet:
+            sample = sample + self.controlnet_cond_embedding(controlnet_cond)
+
+        # 1. dimension matching (pre)
         sample = sample.permute(1, 0, 2)
         sample = self.latent_pre(sample)
-
-        # 1. check if controlnet
-        if self.is_controlnet:
-            controlnet_cond = controlnet_cond.permute(1, 0, 2)
-            sample = sample + self.controlnet_cond_embedding(controlnet_cond)
 
         # 2. time_embedding
         timesteps = timestep.expand(sample.shape[1]).clone()
