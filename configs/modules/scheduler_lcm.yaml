@@ -1,6 +1,6 @@
 scheduler:
   target: mld.models.schedulers.scheduling_lcm.LCMScheduler
-  num_inference_timesteps: 4
+  num_inference_timesteps: 1
   cfg_step_map:
     1: 8.0
     2: 12.5
