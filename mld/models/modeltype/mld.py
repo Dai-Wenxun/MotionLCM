@@ -352,8 +352,8 @@ class MLD(BaseModel):
     def train_diffusion_forward(self, batch: dict) -> dict:
         feats_ref = batch["motion"]
         mask = batch['mask']
-        hint = batch['hint'] if 'hint' in batch else None
-        hint_mask = batch['hint_mask'] if 'hint_mask' in batch else None
+        hint = batch.get('hint', None)
+        hint_mask = batch.get('hint_mask', None)
 
         with torch.no_grad():
             z, dist = self.vae.encode(feats_ref, mask)
@@ -371,28 +371,24 @@ class MLD(BaseModel):
 
         if self.denoiser.time_cond_proj_dim is not None:
             # LCM (only used in motion ControlNet)
-            model_pred = n_set['sample_pred']
-            target = n_set['sample_gt']
+            model_pred, target = n_set['sample_pred'], n_set['sample_gt']
             # Performance comparison: l2 loss > huber loss when training controlnet for LCM
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
         else:
             # DM
             if self.scheduler.config.prediction_type == "epsilon":
-                model_pred = n_set['noise_pred']
-                target = n_set['noise']
+                model_pred, target = n_set['noise_pred'], n_set['noise']
             elif self.scheduler.config.prediction_type == "sample":
-                model_pred = n_set['sample_pred']
-                target = n_set['sample_gt']
+                model_pred, target = n_set['sample_pred'], n_set['sample_gt']
             else:
                 raise ValueError(f"Invalid prediction_type {self.scheduler.config.prediction_type}.")
             diff_loss = F.mse_loss(model_pred, target, reduction="mean")
 
         loss_dict['diff_loss'] = diff_loss
 
-        if n_set['router_loss'] is not None:
-            loss_dict['router_loss'] = n_set['router_loss']
-        else:
-            loss_dict['router_loss'] = torch.tensor(0., device=diff_loss.device)
+        # Router loss
+        loss_dict['router_loss'] = n_set['router_loss'] if n_set['router_loss'] is not None \
+            else torch.tensor(0., device=diff_loss.device)
 
         if self.is_controlnet and self.vaeloss:
             feats_rst = self.vae.decode(n_set['sample_pred'] / self.vae_scale_factor, mask)
@@ -417,11 +413,10 @@ class MLD(BaseModel):
                 loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
 
         else:
-            loss_dict['cond_loss'] = torch.tensor(0., device=diff_loss.device)
-            loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
+            loss_dict['cond_loss'] = loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
 
-        loss = sum([v for v in loss_dict.values()])
-        loss_dict['loss'] = loss
+        total_loss = sum(loss_dict.values())
+        loss_dict['loss'] = total_loss
         return loss_dict
 
     def t2m_eval(self, batch: dict) -> dict:
