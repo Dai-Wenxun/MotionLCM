@@ -7,6 +7,7 @@ from rich.table import Table
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 def set_seed(seed: int) -> None:
@@ -63,3 +64,36 @@ def extract_into_tensor(a: torch.Tensor, t: torch.Tensor, x_shape: torch.Size) -
 
 def sum_flat(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.sum(dim=list(range(1, len(tensor.shape))))
+
+
+def control_loss_calculate(
+        vaeloss_type: str, loss_func: str, src: torch.Tensor,
+        tgt: torch.Tensor, mask: torch.Tensor
+) -> torch.Tensor:
+
+    if loss_func == 'l1':
+        loss = F.l1_loss(src, tgt, reduction='none')
+    elif loss_func == 'l1_smooth':
+        loss = F.smooth_l1_loss(src, tgt, reduction='none')
+    elif loss_func == 'l2':
+        loss = F.mse_loss(src, tgt, reduction='none')
+    else:
+        raise ValueError(f'Unknown loss func: {loss_func}')
+
+    if vaeloss_type == 'sum':
+        loss = loss.sum(-1, keepdims=True) * mask
+        loss = loss.sum() / mask.sum()
+    elif vaeloss_type == 'sum_fix':
+        loss = loss.sum(-1, keepdims=True) * mask
+        loss = sum_flat(loss) / sum_flat(mask)
+        loss = loss.mean()
+    elif vaeloss_type == 'mask':
+        loss = sum_flat(loss * mask)
+        n_entries = src.shape[-1]
+        non_zero_elements = sum_flat(mask) * n_entries
+        loss = loss / non_zero_elements
+        loss = loss.mean()
+    else:
+        raise ValueError(f'Unsupported vaeloss_type: {vaeloss_type}')
+
+    return loss

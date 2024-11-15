@@ -14,7 +14,7 @@ from diffusers.optimization import get_scheduler
 from mld.data.base import BaseDataModule
 from mld.config import instantiate_from_config
 from mld.utils.temos_utils import lengths_to_mask, remove_padding
-from mld.utils.utils import count_parameters, get_guidance_scale_embedding, extract_into_tensor, sum_flat
+from mld.utils.utils import count_parameters, get_guidance_scale_embedding, extract_into_tensor, control_loss_calculate
 from mld.data.humanml.utils.plot_script import plot_3d_motion
 
 from .base import BaseModel
@@ -68,6 +68,10 @@ class MLD(BaseModel):
             self.vaeloss_type = cfg.model.vaeloss_type
             self.cond_ratio = cfg.model.cond_ratio
             self.rot_ratio = cfg.model.rot_ratio
+            self.cond_loss_func = cfg.model.cond_loss_func
+            self.rot_loss_func = cfg.model.rot_loss_func
+            self.use_3d = cfg.model.use_3d
+
             self.traj_encoder = instantiate_from_config(cfg.model.traj_encoder)
 
             logger.info(f"control_scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
@@ -345,18 +349,8 @@ class MLD(BaseModel):
         }
         return n_set
 
-    @staticmethod
-    def masked_l2(a: torch.Tensor, b: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        loss = F.mse_loss(a, b, reduction='none')
-        loss = sum_flat(loss * mask.float())
-        n_entries = a.shape[-1]
-        non_zero_elements = sum_flat(mask) * n_entries
-        mse_loss = loss / non_zero_elements
-        return mse_loss.mean()
-
     def train_diffusion_forward(self, batch: dict) -> dict:
         feats_ref = batch["motion"]
-        lengths = batch["length"]
         mask = batch['mask']
         hint = batch['hint'] if 'hint' in batch else None
         hint_mask = batch['hint_mask'] if 'hint_mask' in batch else None
@@ -402,23 +396,23 @@ class MLD(BaseModel):
 
         if self.is_controlnet and self.vaeloss:
             feats_rst = self.vae.decode(n_set['sample_pred'] / self.vae_scale_factor, mask)
-            joints_rst = self.feats2joints(feats_rst)
-            joints_rst = self.datamodule.norm_spatial(joints_rst)
+
             if self.cond_ratio != 0:
-                hint_mask = hint_mask.sum(-1, keepdim=True) != 0
-                if self.vaeloss_type == 'sum':
-                    cond_loss = (F.mse_loss(joints_rst, hint, reduction='none').sum(-1, keepdims=True) * hint_mask).sum() / hint_mask.sum()
-                    loss_dict['cond_loss'] = self.cond_ratio * cond_loss
-                elif self.vaeloss_type == 'mask':
-                    cond_loss = self.masked_l2(joints_rst, hint, hint_mask)
-                    loss_dict['cond_loss'] = self.cond_ratio * cond_loss
+                joints_rst = self.feats2joints(feats_rst)
+                if self.use_3d:
+                    hint = self.datamodule.denorm_spatial(hint)
                 else:
-                    raise ValueError(f'Unsupported vaeloss_type: {self.vaeloss_type}')
+                    joints_rst = self.datamodule.norm_spatial(joints_rst)
+                hint_mask = hint_mask.sum(-1, keepdim=True) != 0
+                cond_loss = control_loss_calculate(self.vaeloss_type, self.cond_loss_func, joints_rst, hint, hint_mask)
+                loss_dict['cond_loss'] = self.cond_ratio * cond_loss
             else:
                 loss_dict['cond_loss'] = torch.tensor(0., device=diff_loss.device)
 
             if self.rot_ratio != 0:
-                pass
+                mask = mask.unsqueeze(-1)
+                rot_loss = control_loss_calculate(self.vaeloss_type, self.rot_loss_func, feats_rst, feats_ref, mask)
+                loss_dict['rot_loss'] = self.rot_ratio * rot_loss
             else:
                 loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
 
