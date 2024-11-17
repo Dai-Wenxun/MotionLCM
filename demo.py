@@ -40,20 +40,20 @@ def main():
     set_seed(cfg.TRAIN.SEED_VALUE)
 
     name_time_str = osp.join(cfg.NAME, "demo_" + datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S"))
-    output_dir = osp.join(cfg.TEST_FOLDER, name_time_str)
-    vis_dir = osp.join(output_dir, 'samples')
-    os.makedirs(output_dir, exist_ok=False)
+    cfg.output_dir = osp.join(cfg.TEST_FOLDER, name_time_str)
+    vis_dir = osp.join(cfg.output_dir, 'samples')
+    os.makedirs(cfg.output_dir, exist_ok=False)
     os.makedirs(vis_dir, exist_ok=False)
 
     steam_handler = logging.StreamHandler(sys.stdout)
-    file_handler = logging.FileHandler(osp.join(output_dir, 'output.log'))
+    file_handler = logging.FileHandler(osp.join(cfg.output_dir, 'output.log'))
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
                         datefmt="%m/%d/%Y %H:%M:%S",
                         handlers=[steam_handler, file_handler])
     logger = logging.getLogger(__name__)
 
-    OmegaConf.save(cfg, osp.join(output_dir, 'config.yaml'))
+    OmegaConf.save(cfg, osp.join(cfg.output_dir, 'config.yaml'))
 
     state_dict = torch.load(cfg.TEST.CHECKPOINTS, map_location="cpu")["state_dict"]
     logger.info("Loading checkpoints from {}".format(cfg.TEST.CHECKPOINTS))
@@ -117,10 +117,8 @@ def main():
                 text = batch['text']
                 length = batch['length']
                 if 'hint' in batch:
-                    hint = batch['hint']
-                    mask_hint = hint.view(hint.shape[0], hint.shape[1], model.njoints, 3).sum(dim=-1, keepdim=True) != 0
-                    hint = model.datamodule.denorm_spatial(hint)
-                    hint = hint.view(hint.shape[0], hint.shape[1], model.njoints, 3) * mask_hint
+                    hint, hint_mask = batch['hint'], batch['hint_mask']
+                    hint = dataset.denorm_spatial(hint) * hint_mask
                     hint = remove_padding(hint, lengths=length)
                 else:
                     hint = None

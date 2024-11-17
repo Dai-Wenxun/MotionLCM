@@ -100,39 +100,35 @@ class MLD(BaseModel):
 
     def forward(self, batch: dict, optimize: bool = False) -> tuple:
         texts = batch["text"]
+        feats_ref = batch.get("motion", None)
         lengths = batch["length"]
-
-        # demo for [example]-[False] or [dataset]-[True]
-        maybe_has_gt = 'motion' in batch
+        hint = batch.get('hint', None)
+        hint_mask = batch.get('hint_mask', None)
 
         if self.do_classifier_free_guidance:
-            texts = [""] * len(texts) + texts
+            texts = texts + [""] * len(texts)
 
         text_emb = self.text_encoder(texts)
 
+        controlnet_cond = None
         if self.is_controlnet:
-            assert 'hint' in batch, "Hint needed for motion ControlNet"
-            hint_mask = batch['hint'].sum(-1) != 0
-            controlnet_cond = self.traj_encoder(batch['hint'], mask=hint_mask)
+            assert hint is not None
+            hint_reshaped = hint.view(hint.shape[0], hint.shape[1], -1)
+            hint_mask_reshaped = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(dim=-1) != 0
+            controlnet_cond = self.traj_encoder(hint_reshaped, hint_mask_reshaped)
 
-        hint = batch['hint'] if 'hint' in batch else None  # control signals
-        if optimize:
-            pass
-        z = self._diffusion_reverse(text_emb, hint)
+        latents = torch.randn((len(lengths), *self.latent_dim), device=text_emb.device)
+        z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
 
+        mask = batch.get('mask', lengths_to_mask(lengths, text_emb.device))
         with torch.no_grad():
-            if maybe_has_gt:
-                padding_to_max_length = batch['motion'].shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-                mask = lengths_to_mask(lengths, text_emb.device, max_len=padding_to_max_length)
-            else:
-                mask = lengths_to_mask(lengths, text_emb.device)
             feats_rst = self.vae.decode(z / self.vae_scale_factor, mask)
 
         joints = self.feats2joints(feats_rst.detach().cpu())
         joints = remove_padding(joints, lengths)
 
         joints_ref = None
-        if maybe_has_gt:
+        if feats_ref is not None:
             joints_ref = self.feats2joints(batch['motion'].detach().cpu())
             joints_ref = remove_padding(joints_ref, lengths)
 
@@ -427,8 +423,8 @@ class MLD(BaseModel):
         word_embs = batch["word_embs"]
         pos_ohot = batch["pos_ohot"]
         text_lengths = batch["text_len"]
-        hint = batch['hint'] if 'hint' in batch else None
-        hint_mask = batch['hint_mask'] if 'hint_mask' in batch else None
+        hint = batch.get('hint', None)
+        hint_mask = batch.get('hint_mask', None)
 
         start = time.time()
 
@@ -453,11 +449,11 @@ class MLD(BaseModel):
 
         controlnet_cond = None
         if self.is_controlnet:
-            assert 'hint' in batch
+            assert hint is not None
             hint_st = time.time()
             hint_reshaped = hint.view(hint.shape[0], hint.shape[1], -1)
-            hint_mask_reshaped = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(-1) != 0
-            controlnet_cond = self.traj_encoder(hint_reshaped, mask=hint_mask_reshaped)
+            hint_mask_reshaped = hint_mask.view(hint_mask.shape[0], hint_mask.shape[1], -1).sum(dim=-1) != 0
+            controlnet_cond = self.traj_encoder(hint_reshaped, hint_mask_reshaped)
             hint_et = time.time()
             self.traj_encoder_times.append(hint_et - hint_st)
 
