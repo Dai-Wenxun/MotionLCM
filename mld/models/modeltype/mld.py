@@ -79,8 +79,8 @@ class MLD(BaseModel):
                         f"vaeloss_type: {self.vaeloss_type}")
             time.sleep(2)
 
-        if cfg.model.get('noise_optimizer', None):
-            self.dno = instantiate_from_config(cfg.model.noise_optimizer)
+        self.dno = instantiate_from_config(cfg.model['noise_optimizer']) \
+            if cfg.model.get('noise_optimizer') else None
 
         self.summarize_parameters()
 
@@ -462,14 +462,14 @@ class MLD(BaseModel):
 
         latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
 
-        if hint is not None and self.dno.optimize_before:
+        if hint and self.dno and self.dno.optimize_before:
             latents = self._optimize_latents(
                 'before', latents, text_emb, texts, lengths, mask,
                 hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
 
         latents = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
 
-        if hint is not None and self.dno.optimize_after:
+        if hint and self.dno and self.dno.optimize_after:
             latents = self._optimize_latents(
                 'after', latents, text_emb, texts, lengths, mask,
                 hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
