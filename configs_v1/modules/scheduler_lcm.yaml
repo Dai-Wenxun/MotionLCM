@@ -1,5 +1,5 @@
 scheduler:
-  target: diffusers.DDIMScheduler
+  target: diffusers.LCMScheduler
   num_inference_steps: 1
   params:
     num_train_timesteps: 1000
