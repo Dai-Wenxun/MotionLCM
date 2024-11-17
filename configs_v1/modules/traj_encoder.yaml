@@ -1,0 +1,17 @@
+traj_encoder:
+  target: mld.models.architectures.mld_traj_encoder.MldTrajEncoder
+  params:
+    nfeats: ${DATASET.NJOINTS}
+    latent_dim: ${model.latent_dim}
+    hidden_dim: null
+    force_post_proj: false
+    ff_size: 1024
+    num_layers: 9
+    num_heads: 4
+    dropout: 0.1
+    normalize_before: false
+    norm_eps: 1e-5
+    activation: 'gelu'
+    norm_post: true
+    activation_post: null
+    position_embedding: 'learned'
