@@ -79,7 +79,8 @@ class MLD(BaseModel):
                         f"vaeloss_type: {self.vaeloss_type}")
             time.sleep(2)
 
-        self.dno = instantiate_from_config(cfg.model.noise_optimizer)
+        if cfg.model.get('noise_optimizer', None):
+            self.dno = instantiate_from_config(cfg.model.noise_optimizer)
 
         self.summarize_parameters()
 
