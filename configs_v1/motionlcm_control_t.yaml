@@ -1,7 +1,7 @@
-FOLDER: './experiments_control'
-TEST_FOLDER: './experiments_control_test'
+FOLDER: './experiments_control/temporal'
+TEST_FOLDER: './experiments_control_test/temporal'
 
-NAME: 'mld_humanml'
+NAME: 'motionlcm_humanml'
 
 TRAIN:
   DATASET: 'humanml3d'
@@ -10,7 +10,7 @@ TRAIN:
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
   SEED_VALUE: 1234
-  PRETRAINED: 'experiments_t2m/mld_humanml/mld_humanml.ckpt'
+  PRETRAINED: 'experiments_t2m/motionlcm_humanml/motionlcm_humanml_v1.ckpt'
 
   validation_steps: -1
   validation_epochs: 50
@@ -36,11 +36,11 @@ VAL:
 
 TEST:
   DATASET: 'humanml3d'
-  BATCH_SIZE: 1
+  BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
-  CHECKPOINTS: 'experiments_control/mld_humanml/mld_humanml.ckpt'
+  CHECKPOINTS: 'experiments_control/temporal/motionlcm_humanml/motionlcm_humanml_v1.ckpt'
 
   # Testing Args
   REPLICATION_TIMES: 1
@@ -50,39 +50,47 @@ TEST:
   DIVERSITY_TIMES: 300
 
 DATASET:
+  NAME: 'humanml3d'
   SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
     FRAME_RATE: 20.0
     UNIT_LEN: 4
     ROOT: './datasets/humanml3d'
+    CONTROL_ARGS:
+      CONTROL: true
+      TEMPORAL: true
+      TRAIN_JOINTS: [0, 10, 11, 15, 20, 21]
+      TEST_JOINTS: [0, 10, 11, 15, 20, 21]
+      TRAIN_DENSITY: [25, 25]
+      TEST_DESITY: 25
+      MEAN_STD_PATH: './datasets/humanml_spatial_norm'
   SAMPLER:
     MAX_LEN: 200
     MIN_LEN: 40
     MAX_TEXT_LEN: 20
+  PADDING_TO_MAX: false
+  WINDOW_SIZE: null
 
 METRIC:
   DIST_SYNC_ON_STEP: true
   TYPE: ['TM2TMetrics', 'ControlMetrics']
 
 model:
-  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_ddim', 'traj_encoder']
+  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_lcm', 'traj_encoder']
   latent_dim: [1, 256]
   guidance_scale: 7.5
-  guidance_uncondp: 0.1
 
   # ControlNet Args
   is_controlnet: true
-  is_controlnet_temporal: false
-  training_control_joint: [0]
-  testing_control_joint: [0]
-  training_density: 'random'
-  testing_density: 100
   control_scale: 1.0
   vaeloss: true
   vaeloss_type: 'sum'
   cond_ratio: 1.0
   rot_ratio: 0.0
+  cond_loss_func: 'l2'
+  rot_loss_func: 'l2'
+  use_3d: false
 
   t2m_textencoder:
     dim_word: 300
