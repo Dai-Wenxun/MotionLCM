@@ -462,14 +462,14 @@ class MLD(BaseModel):
 
         latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
 
-        if hint and self.dno and self.dno.optimize_before:
+        if hint is not None and (self.dno and self.dno.optimize_before):
             latents = self._optimize_latents(
                 'before', latents, text_emb, texts, lengths, mask,
                 hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
 
         latents = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
 
-        if hint and self.dno and self.dno.optimize_after:
+        if hint is not None and (self.dno and self.dno.optimize_after):
             latents = self._optimize_latents(
                 'after', latents, text_emb, texts, lengths, mask,
                 hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
