@@ -1,0 +1,28 @@
+denoiser:
+  target: mld.models.architectures.mld_denoiser.MldDenoiser
+  params:
+    latent_dim: ${model.latent_dim}
+    hidden_dim: null
+    text_dim: 768
+    time_dim: 768
+    ff_size: 1024
+    num_layers: 9
+    num_heads: 4
+    dropout: 0.1
+    normalize_before: false
+    norm_eps: 1e-5
+    activation: 'gelu'
+    norm_post: true
+    activation_post: null
+    flip_sin_to_cos: true
+    freq_shift: 0
+    time_act_fn: 'silu'
+    time_post_act_fn: null
+    position_embedding: 'learned'
+    arch: 'trans_enc'
+    add_mem_pos: true
+    force_pre_post_proj: false
+    text_act_fn: 'relu'
+    zero_init_cond: true
+    controlnet_embed_dim: 256
+    controlnet_act_fn: 'silu'
