@@ -6,8 +6,8 @@ from argparse import ArgumentParser
 from omegaconf import OmegaConf, DictConfig
 
 
-def get_module_config(cfg_model: DictConfig, paths: list[str]) -> DictConfig:
-    files = [os.path.join('./configs/modules', p+'.yaml') for p in paths]
+def get_module_config(cfg_model: DictConfig, paths: list[str], cfg_root: str) -> DictConfig:
+    files = [os.path.join(cfg_root, 'modules', p+'.yaml') for p in paths]
     for file in files:
         assert os.path.exists(file), f'{file} is not exists.'
         with open(file, 'r') as f:
@@ -37,7 +37,8 @@ def parse_args() -> DictConfig:
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.cfg)
-    cfg_model = get_module_config(cfg.model, cfg.model.target)
+    cfg_root = os.path.dirname(args.cfg)
+    cfg_model = get_module_config(cfg.model, cfg.model.target, cfg_root)
     cfg = OmegaConf.merge(cfg, cfg_model)
 
     cfg.example = args.example
