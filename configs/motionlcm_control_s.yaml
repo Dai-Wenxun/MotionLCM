@@ -1,5 +1,5 @@
-FOLDER: './experiments_control'
-TEST_FOLDER: './experiments_control_test'
+FOLDER: './experiments_control/spatial'
+TEST_FOLDER: './experiments_control_test/spatial'
 
 NAME: 'motionlcm_humanml'
 

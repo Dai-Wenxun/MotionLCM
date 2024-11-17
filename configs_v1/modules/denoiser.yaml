@@ -25,4 +25,4 @@ denoiser:
     text_act_fn: 'relu'
     zero_init_cond: true
     controlnet_embed_dim: 256
-    controlnet_act_fn: 'silu'
+    controlnet_act_fn: null
