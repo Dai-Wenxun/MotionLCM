@@ -8,7 +8,7 @@ TRAIN:
   SPLIT: 'train'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
-  SEED_VALUE: 1234
+  SEED_VALUE: 500
   PRETRAINED: 'experiments_t2m/mld_humanml/mld_humanml_v1.ckpt'
 
   validation_steps: -1
