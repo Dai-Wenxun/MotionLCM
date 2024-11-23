@@ -92,6 +92,7 @@ model:
   rot_loss_func: 'l2'
   use_3d: false
 
+  # LCM Args
   lcm_w_min_nax: [5, 15]
   lcm_num_ddim_timesteps: 10
 
