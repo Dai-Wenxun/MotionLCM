@@ -92,6 +92,10 @@ model:
   rot_loss_func: 'l2'
   use_3d: false
 
+  # LCM Args
+  lcm_w_min_nax: null
+  lcm_num_ddim_timesteps: null
+
   t2m_textencoder:
     dim_word: 300
     dim_pos_ohot: 15

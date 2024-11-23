@@ -72,6 +72,9 @@ class MLD(BaseModel):
             self.rot_loss_func = cfg.model.rot_loss_func
             self.use_3d = cfg.model.use_3d
 
+            self.lcm_w_min_nax = cfg.model.get('lcm_w_min_nax')
+            self.lcm_num_ddim_timesteps = cfg.model.get('lcm_num_ddim_timesteps')
+
             self.traj_encoder = instantiate_from_config(cfg.model.traj_encoder)
 
             logger.info(f"control_scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
@@ -311,14 +314,40 @@ class MLD(BaseModel):
         # [batch_size, n_token, latent_dim]
         noise = torch.randn_like(latents)
         bsz = latents.shape[0]
-        timesteps = torch.randint(
-            0,
-            self.scheduler.config.num_train_timesteps,
-            (bsz,),
-            device=latents.device
-        )
+
+        if self.lcm_num_ddim_timesteps is not None:
+            step_size = self.scheduler.config.num_train_timesteps // self.lcm_num_ddim_timesteps
+            candidate_timesteps = torch.arange(
+                start=step_size - 1,
+                end=self.scheduler.config.num_train_timesteps,
+                step=step_size,
+                device=latents.device
+            )
+            timesteps = candidate_timesteps[torch.randint(
+                low=0,
+                high=candidate_timesteps.size(0),
+                size=(bsz,),
+                device=latents.device
+            )]
+        else:
+            timesteps = torch.randint(
+                0,
+                self.scheduler.config.num_train_timesteps,
+                (bsz,),
+                device=latents.device
+            )
         timesteps = timesteps.long()
         noisy_latents = self.scheduler.add_noise(latents.clone(), noise, timesteps)
+
+        timestep_cond = None
+        if self.denoiser.time_cond_proj_dim is not None:
+            if self.lcm_w_min_nax is None:
+                w = torch.tensor(self.guidance_scale - 1).repeat(latents.shape[0])
+            else:
+                w = (self.lcm_w_min_nax[1] - self.lcm_w_min_nax[0]) * torch.rand((bsz,)) + self.lcm_w_min_nax[0]
+            timestep_cond = get_guidance_scale_embedding(
+                w, embedding_dim=self.denoiser.time_cond_proj_dim
+            ).to(device=latents.device, dtype=latents.dtype)
 
         controlnet_residuals = None
         router_loss_controlnet = None
@@ -326,12 +355,14 @@ class MLD(BaseModel):
             controlnet_residuals, router_loss_controlnet = self.controlnet(
                 sample=noisy_latents,
                 timestep=timesteps,
+                timestep_cond=timestep_cond,
                 encoder_hidden_states=encoder_hidden_states,
                 controlnet_cond=controlnet_cond)
 
         model_output, router_loss = self.denoiser(
             sample=noisy_latents,
             timestep=timesteps,
+            timestep_cond=timestep_cond,
             encoder_hidden_states=encoder_hidden_states,
             controlnet_residuals=controlnet_residuals)
 
