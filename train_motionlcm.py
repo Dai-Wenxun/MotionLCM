@@ -260,7 +260,7 @@ def main():
         return max_val_rp1, min_val_fid
 
     max_rp1, min_fid = validation()
-    validation(ema=True)
+    # validation(ema=True)
 
     progress_bar = tqdm(range(0, cfg.TRAIN.max_train_steps), desc="Steps")
     while True:
@@ -404,7 +404,7 @@ def main():
 
             if global_step % cfg.TRAIN.validation_steps == 0:
                 cur_rp1, cur_fid = validation()
-                validation(ema=True)
+                # validation(ema=True)
                 if cur_rp1 > max_rp1:
                     max_rp1 = cur_rp1
                     save_path = os.path.join(cfg.output_dir, 'checkpoints',
