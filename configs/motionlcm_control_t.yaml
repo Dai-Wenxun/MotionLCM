@@ -85,7 +85,7 @@ model:
   is_controlnet: true
   control_scale: 1.0
   vaeloss: true
-  vaeloss_type: 'mask'
+  vaeloss_type: 'sum'
   cond_ratio: 1.0
   rot_ratio: 0.0
   cond_loss_func: 'l2'
