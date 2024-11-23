@@ -80,6 +80,8 @@ class MLD(BaseModel):
             logger.info(f"control_scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
                         f"cond_ratio: {self.cond_ratio}, rot_ratio: {self.rot_ratio}, "
                         f"vaeloss_type: {self.vaeloss_type}")
+            logger.info(f"lcm_w_min_nax: {self.lcm_w_min_nax}, "
+                        f"lcm_num_ddim_timesteps: {self.lcm_num_ddim_timesteps}")
             time.sleep(2)
 
         self.dno = instantiate_from_config(cfg.model['noise_optimizer']) \
