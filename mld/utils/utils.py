@@ -83,7 +83,7 @@ def control_loss_calculate(
     if vaeloss_type == 'sum':
         loss = loss.sum(-1, keepdims=True) * mask
         loss = loss.sum() / mask.sum()
-    elif vaeloss_type == 'sum_fix':
+    elif vaeloss_type == 'sum_mask':
         loss = loss.sum(-1, keepdims=True) * mask
         loss = sum_flat(loss) / sum_flat(mask)
         loss = loss.mean()
