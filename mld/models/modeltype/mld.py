@@ -31,7 +31,6 @@ class MLD(BaseModel):
         self.njoints = cfg.DATASET.NJOINTS
         self.latent_dim = cfg.model.latent_dim
         self.guidance_scale = cfg.model.guidance_scale
-        self.guidance_uncondp = cfg.model.get('guidance_uncondp', 0.0)
         self.datamodule = datamodule
 
         if cfg.model.guidance_scale == 'dynamic':
@@ -53,36 +52,57 @@ class MLD(BaseModel):
         self.configure_metrics()
 
         self.feats2joints = datamodule.feats2joints
+
         self.vae_scale_factor = cfg.model.get("vae_scale_factor", 1.0)
+        self.guidance_uncondp = cfg.model.get('guidance_uncondp', 0.0)
 
         logger.info(f"vae_scale_factor: {self.vae_scale_factor}")
         logger.info(f"prediction_type: {self.scheduler.config.prediction_type}")
+        logger.info(f"guidance_scale: {self.guidance_scale}")
+        logger.info(f"guidance_uncondp: {self.guidance_uncondp}")
 
         self.is_controlnet = cfg.model.get('is_controlnet', False)
         if self.is_controlnet:
             c_cfg = self.cfg.model.denoiser.copy()
             c_cfg['params']['is_controlnet'] = True
             self.controlnet = instantiate_from_config(c_cfg)
-            self.control_scale = cfg.model.control_scale
-            self.vaeloss = cfg.model.vaeloss
-            self.vaeloss_type = cfg.model.vaeloss_type
-            self.cond_ratio = cfg.model.cond_ratio
-            self.rot_ratio = cfg.model.rot_ratio
-            self.cond_loss_func = cfg.model.cond_loss_func
-            self.rot_loss_func = cfg.model.rot_loss_func
-            self.use_3d = cfg.model.use_3d
-
-            self.lcm_w_min_nax = cfg.model.get('lcm_w_min_nax')
-            self.lcm_num_ddim_timesteps = cfg.model.get('lcm_num_ddim_timesteps')
-
             self.traj_encoder = instantiate_from_config(cfg.model.traj_encoder)
 
-            logger.info(f"control_scale: {self.control_scale}, vaeloss: {self.vaeloss}, "
-                        f"cond_ratio: {self.cond_ratio}, rot_ratio: {self.rot_ratio}, "
-                        f"vaeloss_type: {self.vaeloss_type}")
+            self.vaeloss = cfg.model.get('vaeloss', False)
+            self.vaeloss_type = cfg.model.get('vaeloss_type', 'sum')
+            self.cond_ratio = cfg.model.get('cond_ratio', 0.0)
+            self.rot_ratio = cfg.model.get('rot_ratio', 0.0)
+            self.control_loss_func = cfg.model.get('control_loss_func', 'l2')
+            if self.vaeloss and self.cond_ratio == 0.0 and self.rot_ratio == 0.0:
+                raise ValueError("Error: When 'vaeloss' is True, 'cond_ratio' and 'rot_ratio' cannot both be 0.")
+            self.use_3d = cfg.model.get('use_3d', False)
+            if self.use_3d and not self.vaeloss:
+                raise ValueError("Error: When 'use_3d' is True, 'vaeloss' must be enabled.")
+            self.guess_mode = cfg.model.get('guess_mode', False)
+            if self.guess_mode and not self.do_classifier_free_guidance:
+                raise ValueError(
+                    "Invalid configuration: 'guess_mode' is enabled, but 'do_classifier_free_guidance' is not. "
+                    "Ensure that 'do_classifier_free_guidance' is True (MLD) when 'guess_mode' is active."
+                )
+            self.lcm_w_min_nax = cfg.model.get('lcm_w_min_nax')
+            self.lcm_num_ddim_timesteps = cfg.model.get('lcm_num_ddim_timesteps')
+            if (self.lcm_w_min_nax is not None or self.lcm_num_ddim_timesteps is not None) and self.denoiser.time_cond_proj_dim is None:
+                raise ValueError(
+                    "Invalid configuration: When either 'lcm_w_min_nax' or 'lcm_num_ddim_timesteps' is not None, "
+                    "'denoiser.time_cond_proj_dim' must be None (MotionLCM)."
+                )
+
+            logger.info(f"vaeloss: {self.vaeloss}, "
+                        f"vaeloss_type: {self.vaeloss_type}, "
+                        f"cond_ratio: {self.cond_ratio}, "
+                        f"rot_ratio: {self.rot_ratio}, "
+                        f"control_loss_func: {self.control_loss_func}")
+            logger.info(f"use_3d: {self.use_3d}, "
+                        f"guess_mode: {self.guess_mode}")
             logger.info(f"lcm_w_min_nax: {self.lcm_w_min_nax}, "
                         f"lcm_num_ddim_timesteps: {self.lcm_num_ddim_timesteps}")
-            time.sleep(2)
+
+            time.sleep(2)  # 留个心眼
 
         self.dno = instantiate_from_config(cfg.model['noise_optimizer']) \
             if cfg.model.get('noise_optimizer') else None
@@ -270,7 +290,7 @@ class MLD(BaseModel):
                 guidance_scale_tensor, embedding_dim=self.denoiser.time_cond_proj_dim
             ).to(device=latents.device, dtype=latents.dtype)
 
-        if self.do_classifier_free_guidance:
+        if self.do_classifier_free_guidance and not self.guess_mode:
             controlnet_cond = torch.cat([controlnet_cond] * 2)
 
         for i, t in tqdm.tqdm(enumerate(timesteps)):
@@ -280,13 +300,23 @@ class MLD(BaseModel):
 
             controlnet_residuals = None
             if self.is_controlnet:
+                if self.do_classifier_free_guidance and self.guess_mode:
+                    control_model_input = latents
+                    control_model_input = self.scheduler.scale_model_input(control_model_input, t)
+                    controlnet_prompt_embeds = encoder_hidden_states.chunk(2)[0]
+                else:
+                    control_model_input = latent_model_input
+                    controlnet_prompt_embeds = encoder_hidden_states
+
                 controlnet_residuals = self.controlnet(
-                    sample=latent_model_input,
+                    sample=control_model_input,
                     timestep=t,
                     timestep_cond=timestep_cond,
-                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_hidden_states=controlnet_prompt_embeds,
                     controlnet_cond=controlnet_cond)[0]
-                controlnet_residuals = [d * self.control_scale for d in controlnet_residuals]
+
+                if self.do_classifier_free_guidance and self.guess_mode:
+                    controlnet_residuals = [torch.cat([d, torch.zeros_like(d)], dim=1) for d in controlnet_residuals]
 
             # predict the noise residual
             model_output = self.denoiser(
@@ -432,14 +462,15 @@ class MLD(BaseModel):
                 else:
                     joints_rst = self.datamodule.norm_spatial(joints_rst)
                 hint_mask = hint_mask.sum(-1, keepdim=True) != 0
-                cond_loss = control_loss_calculate(self.vaeloss_type, self.cond_loss_func, joints_rst, hint, hint_mask)
+                cond_loss = control_loss_calculate(self.vaeloss_type, self.control_loss_func, joints_rst, hint,
+                                                   hint_mask)
                 loss_dict['cond_loss'] = self.cond_ratio * cond_loss
             else:
                 loss_dict['cond_loss'] = torch.tensor(0., device=diff_loss.device)
 
             if self.rot_ratio != 0:
                 mask = mask.unsqueeze(-1)
-                rot_loss = control_loss_calculate(self.vaeloss_type, self.rot_loss_func, feats_rst, feats_ref, mask)
+                rot_loss = control_loss_calculate(self.vaeloss_type, self.control_loss_func, feats_rst, feats_ref, mask)
                 loss_dict['rot_loss'] = self.rot_ratio * rot_loss
             else:
                 loss_dict['rot_loss'] = torch.tensor(0., device=diff_loss.device)
