@@ -41,6 +41,7 @@ TEST:
   # Testing Args
   REPLICATION_TIMES: 20
   DIVERSITY_TIMES: 300
+  DO_MM_TEST: false
 
 DATASET:
   NAME: 'humanml3d'
