@@ -271,7 +271,7 @@ class MLD(BaseModel):
             ).to(device=latents.device, dtype=latents.dtype)
 
         if self.do_classifier_free_guidance:
-            controlnet_cond = torch.cat([controlnet_cond] * 2, dim=0)
+            controlnet_cond = torch.cat([controlnet_cond] * 2)
 
         for i, t in tqdm.tqdm(enumerate(timesteps)):
             # expand the latents if we are doing classifier free guidance
