@@ -84,16 +84,11 @@ model:
 
   # ControlNet Args
   is_controlnet: true
-  control_scale: 1.0
   vaeloss: true
   vaeloss_type: 'sum'
   cond_ratio: 1.0
-  rot_ratio: 0.0
-  cond_loss_func: 'l2'
-  rot_loss_func: 'l2'
+  control_loss_func: 'l2'
   use_3d: false
-
-  # LCM Args
   lcm_w_min_nax: null
   lcm_num_ddim_timesteps: null
 
