@@ -270,7 +270,9 @@ class MLD(BaseModel):
                 guidance_scale_tensor, embedding_dim=self.denoiser.time_cond_proj_dim
             ).to(device=latents.device, dtype=latents.dtype)
 
-        # reverse
+        if self.do_classifier_free_guidance:
+            controlnet_cond = torch.cat([controlnet_cond] * 2, dim=0)
+
         for i, t in tqdm.tqdm(enumerate(timesteps)):
             # expand the latents if we are doing classifier free guidance
             latent_model_input = (torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents)

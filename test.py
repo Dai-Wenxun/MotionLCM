@@ -110,7 +110,7 @@ def main():
         logger.info(f"Evaluating {metrics_type} - Replication {i}")
         metrics = test_one_epoch(model, test_dataloader, device)
 
-        if "TM2TMetrics" in metrics_type and "PosMetrics" not in metrics_type:
+        if "TM2TMetrics" in metrics_type and cfg.TEST.DO_MM_TEST:
             # mm metrics
             logger.info(f"Evaluating MultiModality - Replication {i}")
             dataset.mm_mode(True)
