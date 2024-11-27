@@ -36,14 +36,14 @@ VAL:
 
 TEST:
   DATASET: 'humanml3d'
-  BATCH_SIZE: 1
+  BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
 
-  CHECKPOINTS: 'experiments_control/motionlcm_humanml/motionlcm_humanml.ckpt'
+  CHECKPOINTS: ''
 
   # Testing Args
-  REPLICATION_TIMES: 1
+  REPLICATION_TIMES: 20
   MM_NUM_SAMPLES: 100
   MM_NUM_REPEATS: 30
   MM_NUM_TIMES: 10
@@ -84,16 +84,11 @@ model:
 
   # ControlNet Args
   is_controlnet: true
-  control_scale: 1.0
   vaeloss: true
   vaeloss_type: 'mask'
   cond_ratio: 1.0
-  rot_ratio: 0.0
-  cond_loss_func: 'l1_smooth'
-  rot_loss_func: 'l2'
+  control_loss_func: 'l1_smooth'
   use_3d: true
-
-  # LCM Args
   lcm_w_min_nax: [5, 15]
   lcm_num_ddim_timesteps: 10
 
