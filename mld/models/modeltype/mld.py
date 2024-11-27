@@ -180,7 +180,6 @@ class MLD(BaseModel):
     @torch.enable_grad()
     def _optimize_latents(
             self,
-            stage: str,
             latents: torch.Tensor,
             encoder_hidden_states: torch.Tensor,
             texts: list[str], lengths: list[int], mask: torch.Tensor,
@@ -201,15 +200,7 @@ class MLD(BaseModel):
         vis_id = self.dno.visualize_samples_done
         hint_3d = self.datamodule.denorm_spatial(hint) * hint_mask
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
-
-            if stage == 'before':
-                z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states,
-                                                 controlnet_cond=controlnet_cond)
-            elif stage == 'after':
-                z_pred = current_latents
-            else:
-                raise ValueError(f'Invalid stage: {stage}')
-
+            z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond=controlnet_cond)
             feats_rst = self.vae.decode(z_pred / self.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
@@ -528,17 +519,12 @@ class MLD(BaseModel):
 
         latents = torch.randn((feats_ref.shape[0], *self.latent_dim), device=text_emb.device)
 
-        if hint is not None and (self.dno and self.dno.optimize_before):
+        if hint is not None and self.dno and self.dno.optimize:
             latents = self._optimize_latents(
-                'before', latents, text_emb, texts, lengths, mask,
-                hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
+                latents, text_emb, texts, lengths, mask, hint, hint_mask,
+                controlnet_cond=controlnet_cond, feats_ref=feats_ref)
 
         latents = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
-
-        if hint is not None and (self.dno and self.dno.optimize_after):
-            latents = self._optimize_latents(
-                'after', latents, text_emb, texts, lengths, mask,
-                hint, hint_mask, controlnet_cond=controlnet_cond, feats_ref=feats_ref)
 
         diff_et = time.time()
         self.diffusion_times.append(diff_et - diff_st)
