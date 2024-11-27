@@ -40,7 +40,7 @@ TEST:
   SPLIT: 'test'
   NUM_WORKERS: 12
 
-  CHECKPOINTS: ''
+  CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s.ckpt'
 
   # Testing Args
   REPLICATION_TIMES: 20
