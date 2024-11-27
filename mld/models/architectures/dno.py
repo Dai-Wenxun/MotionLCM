@@ -8,8 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 class DNO(object):
     def __init__(
             self,
-            optimize_before: bool,
-            optimize_after: bool,
+            optimize: bool,
             max_train_steps: int,
             learning_rate: float,
             lr_scheduler: str,
@@ -23,8 +22,7 @@ class DNO(object):
             output_dir: str
     ) -> None:
 
-        self.optimize_before = optimize_before
-        self.optimize_after = optimize_after
+        self.optimize = optimize
         self.max_train_steps = max_train_steps
         self.learning_rate = learning_rate
         self.lr_scheduler = lr_scheduler
