@@ -100,6 +100,7 @@ def main():
     model = target_model_class(cfg, dataset)
     model.to(device)
     model.eval()
+    model.requires_grad_(False)
     logger.info(model.load_state_dict(state_dict))
 
     all_metrics = {}

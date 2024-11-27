@@ -46,8 +46,6 @@ class DNO(object):
         self.visualize_samples_done = 0
         self.visualize_ske_steps = visualize_ske_steps
         if len(visualize_ske_steps) > 0:
-            for step in visualize_ske_steps:
-                assert step <= max_train_steps
             self.vis_dir = os.path.join(output_dir, 'vis_optimize')
             os.makedirs(self.vis_dir)
 
