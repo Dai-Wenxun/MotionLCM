@@ -43,7 +43,7 @@ TEST:
   CHECKPOINTS: 'experiments_control/temporal/motionlcm_humanml/motionlcm_humanml_t_v1.ckpt'
 
   # Testing Args
-  REPLICATION_TIMES: 1
+  REPLICATION_TIMES: 20
   MM_NUM_SAMPLES: 100
   MM_NUM_REPEATS: 30
   MM_NUM_TIMES: 10
