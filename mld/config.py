@@ -34,6 +34,7 @@ def parse_args() -> DictConfig:
     parser.add_argument('--no-plot', action="store_true", required=False, help="Whether to plot the skeleton-based motion")
     parser.add_argument('--replication', type=int, default=1, help="The number of replications of sampling")
     parser.add_argument('--vis', type=str, default="tb", choices=['tb', 'swanlab'], help="The visualization backends: tensorboard or swanlab")
+    parser.add_argument('--optimize', action='store_true', help="Enable optimization for motion control")
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.cfg)
@@ -45,4 +46,5 @@ def parse_args() -> DictConfig:
     cfg.no_plot = args.no_plot
     cfg.replication = args.replication
     cfg.vis = args.vis
+    cfg.model.noise_optimizer.params.optimize = args.optimize
     return cfg
