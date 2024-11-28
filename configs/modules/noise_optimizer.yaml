@@ -2,6 +2,7 @@ noise_optimizer:
   target: mld.models.architectures.dno.DNO
   params:
     optimize: false
+    num_inference_steps: 1
     max_train_steps: 400
     learning_rate: 0.5
     lr_scheduler: 'cosine'

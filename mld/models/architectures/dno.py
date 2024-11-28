@@ -9,6 +9,7 @@ class DNO(object):
     def __init__(
             self,
             optimize: bool,
+            num_inference_steps: int,
             max_train_steps: int,
             learning_rate: float,
             lr_scheduler: str,
@@ -23,6 +24,7 @@ class DNO(object):
     ) -> None:
 
         self.optimize = optimize
+        self.num_inference_steps = num_inference_steps
         self.max_train_steps = max_train_steps
         self.learning_rate = learning_rate
         self.lr_scheduler = lr_scheduler
