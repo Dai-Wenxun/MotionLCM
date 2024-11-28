@@ -95,7 +95,9 @@ def main():
     else:
         target_model_class = VAE
 
-    if cfg.optimize or cfg.model.noise_optimizer.params.optimize:
+    if cfg.optimize:
+        assert not cfg.model.get('noise_optimizer')
+        cfg.model.noise_optimizer.params.optimize = True
         logger.info('Optimization enabled. For better control performance, '
                     'it is recommended to set the batch size to 1.')
         logger.info(f'Current batch size: {cfg.TEST.BATCH_SIZE}')
