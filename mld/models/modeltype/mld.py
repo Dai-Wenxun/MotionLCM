@@ -76,8 +76,6 @@ class MLD(BaseModel):
             if self.vaeloss and self.cond_ratio == 0.0 and self.rot_ratio == 0.0:
                 raise ValueError("Error: When 'vaeloss' is True, 'cond_ratio' and 'rot_ratio' cannot both be 0.")
             self.use_3d = cfg.model.get('use_3d', False)
-            if self.use_3d and not self.vaeloss:
-                raise ValueError("Error: When 'use_3d' is True, 'vaeloss' must be enabled.")
             self.guess_mode = cfg.model.get('guess_mode', False)
             if self.guess_mode and not self.do_classifier_free_guidance:
                 raise ValueError(
