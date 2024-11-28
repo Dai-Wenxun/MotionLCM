@@ -96,8 +96,8 @@ def main():
         target_model_class = VAE
 
     if cfg.model.noise_optimizer.params.optimize:
-        logger.info('"Optimization enabled. For better control performance, '
-                    'it is recommended to set the batch size to 1."')
+        logger.info('Optimization enabled. For better control performance, '
+                    'it is recommended to set the batch size to 1.')
         logger.info(f'Current batch size: {cfg.TEST.BATCH_SIZE}')
 
     dataset = get_dataset(cfg)
