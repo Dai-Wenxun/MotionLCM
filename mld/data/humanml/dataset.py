@@ -203,7 +203,7 @@ class Text2MotionDataset(Dataset):
             self.training_control_joints = np.array(control_args.TRAIN_JOINTS)
             self.testing_control_joints = np.array(control_args.TEST_JOINTS)
             self.training_density = control_args.TRAIN_DENSITY
-            self.testing_density = control_args.TEST_DESITY
+            self.testing_density = control_args.TEST_DENSITY
 
             self.control_mode = 'val' if ('test' in split_file or 'val' in split_file) else 'train'
             if self.control_mode == 'train':
