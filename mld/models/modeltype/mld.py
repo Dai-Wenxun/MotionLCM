@@ -200,7 +200,8 @@ class MLD(BaseModel):
         vis_id = self.dno.visualize_samples_done
         hint_3d = self.datamodule.denorm_spatial(hint) * hint_mask
         for step in tqdm.tqdm(range(1, self.dno.max_train_steps + 1)):
-            z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond=controlnet_cond)
+            z_pred = self._diffusion_reverse(current_latents, encoder_hidden_states, controlnet_cond=controlnet_cond,
+                                             num_inference_steps=self.dno.num_inference_steps)
             feats_rst = self.vae.decode(z_pred / self.vae_scale_factor, mask)
             joints_rst = self.feats2joints(feats_rst)
 
@@ -260,12 +261,15 @@ class MLD(BaseModel):
             self,
             latents: torch.Tensor,
             encoder_hidden_states: torch.Tensor,
-            controlnet_cond: Optional[torch.Tensor] = None) -> torch.Tensor:
+            controlnet_cond: Optional[torch.Tensor] = None,
+            num_inference_steps: Optional[int] = None
+    ) -> torch.Tensor:
 
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
         # set timesteps
-        self.scheduler.set_timesteps(self.cfg.model.scheduler.num_inference_steps)
+        num_inference_steps = num_inference_steps or self.cfg.model.scheduler.num_inference_steps
+        self.scheduler.set_timesteps(num_inference_steps)
         timesteps = self.scheduler.timesteps.to(encoder_hidden_states.device)
         # prepare extra kwargs for the scheduler step, since not all schedulers have the same signature
         # eta (η) is only used with the DDIMScheduler, and between [0, 1]
