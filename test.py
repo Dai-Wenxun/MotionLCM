@@ -110,8 +110,14 @@ def main():
 
     all_metrics = {}
     replication_times = cfg.TEST.REPLICATION_TIMES
+    max_num_samples = cfg.TEST.get('MAX_NUM_SAMPLES')
+    name_list = test_dataloader.dataset.name_list
     # calculate metrics
     for i in range(replication_times):
+        if max_num_samples is not None:
+            chosen_list = np.random.choice(name_list, max_num_samples, replace=False)
+            test_dataloader.dataset.name_list = chosen_list
+
         metrics_type = ", ".join(cfg.METRIC.TYPE)
         logger.info(f"Evaluating {metrics_type} - Replication {i}")
         metrics = test_one_epoch(model, test_dataloader, device)
