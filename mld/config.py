@@ -46,5 +46,5 @@ def parse_args() -> DictConfig:
     cfg.no_plot = args.no_plot
     cfg.replication = args.replication
     cfg.vis = args.vis
-    cfg.model.noise_optimizer.params.optimize = args.optimize
+    cfg.optimize = args.optimize
     return cfg
