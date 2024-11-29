@@ -1,9 +1,8 @@
-import numpy as np
-import torch
-import math
-
 from os.path import join as pjoin
 
+import numpy as np
+
+import torch
 
 # joints:
 # 0: pelvis:
@@ -653,8 +652,7 @@ def load_hints_and_texts(n_frames, control_type_ids, control_hint_ids, cfg):
     raw_mean = np.load(pjoin(spatial_norm_path, 'Mean_raw.npy'))
     raw_std = np.load(pjoin(spatial_norm_path, 'Std_raw.npy'))
 
-    texts = []
-    hints = []
+    texts, hints, hint_masks = [], [], []
     for n_frame, control_type_id, control_hint_id in zip(n_frames, control_type_ids, control_hint_ids):
 
         if control_type_id == 0:
@@ -680,6 +678,8 @@ def load_hints_and_texts(n_frames, control_type_ids, control_hint_ids, cfg):
 
         texts.append(text)
         hints.append(hint)
+        hint_masks.append(hint != 0)
 
-    hints = np.concatenate(hints, axis=0)
-    return texts, hints
+    hints = torch.from_numpy(np.concatenate(hints, axis=0))
+    hint_masks = torch.from_numpy(np.concatenate(hint_masks, axis=0))
+    return texts, hints, hint_masks

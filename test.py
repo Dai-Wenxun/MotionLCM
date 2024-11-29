@@ -98,9 +98,9 @@ def main():
     if cfg.optimize:
         assert cfg.model.get('noise_optimizer') is not None
         cfg.model.noise_optimizer.params.optimize = True
-        logger.info('Optimization enabled. For better control performance, '
-                    'it is recommended to set the batch size to 1.')
-        logger.info(f'Current batch size: {cfg.TEST.BATCH_SIZE}')
+        logger.info('Optimization enabled. Set the batch size to 1.')
+        logger.info(f'Original batch size: {cfg.TEST.BATCH_SIZE}')
+        cfg.TEST.BATCH_SIZE = 1
 
     dataset = get_dataset(cfg)
     test_dataloader = dataset.test_dataloader()
