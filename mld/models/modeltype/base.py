@@ -149,7 +149,7 @@ class BaseModel(nn.Module):
             else:
                 raise NotImplementedError(f"Do not support Metric Type {metric}.")
 
-        if "TM2TMetrics" in self.metric_list and "PosMetrics" not in self.metric_list:
+        if "TM2TMetrics" in self.metric_list and self.TEST.DO_MM_TEST:
             self.MMMetrics = MMMetrics(
                 mm_num_times=self.cfg.TEST.MM_NUM_TIMES,
                 dist_sync_on_step=self.cfg.METRIC.DIST_SYNC_ON_STEP)

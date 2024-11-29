@@ -121,7 +121,7 @@ def update_ema(target_params: Generator, source_params: Generator, rate: float =
 def main():
     cfg = parse_args()
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    set_seed(cfg.TRAIN.SEED_VALUE)
+    set_seed(cfg.SEED_VALUE)
 
     name_time_str = osp.join(cfg.NAME, datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S"))
     cfg.output_dir = osp.join(cfg.FOLDER, name_time_str)

@@ -31,6 +31,7 @@ def parse_args() -> DictConfig:
     parser = ArgumentParser()
     parser.add_argument("--cfg", type=str, required=True, help="The main config file")
     parser.add_argument('--example', type=str, required=False, help="The input texts and lengths with txt format")
+    parser.add_argument('--example_hint', type=str, required=False, help="The input hint ids and lengths with txt format")
     parser.add_argument('--no-plot', action="store_true", required=False, help="Whether to plot the skeleton-based motion")
     parser.add_argument('--replication', type=int, default=1, help="The number of replications of sampling")
     parser.add_argument('--vis', type=str, default="tb", choices=['tb', 'swanlab'], help="The visualization backends: tensorboard or swanlab")
@@ -43,6 +44,7 @@ def parse_args() -> DictConfig:
     cfg = OmegaConf.merge(cfg, cfg_model)
 
     cfg.example = args.example
+    cfg.example_hint = args.example_hint
     cfg.no_plot = args.no_plot
     cfg.replication = args.replication
     cfg.vis = args.vis

@@ -77,7 +77,6 @@ def main():
     model.eval()
     model.load_state_dict(state_dict)
 
-    # example only support text-to-motion
     if cfg.example is not None and not is_controlnet:
         text, length = load_example_input(cfg.example)
         for t, l in zip(text, length):
@@ -104,6 +103,9 @@ def main():
 
                 if not cfg.no_plot:
                     plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(), text[i], fps=20)
+
+    if cfg.example_hint is not None:
+        pass
 
     else:
         test_dataloader = dataset.test_dataloader()
