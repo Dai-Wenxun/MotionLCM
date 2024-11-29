@@ -99,7 +99,7 @@ class TM2TMetrics(Metric):
             metrics[f"R_precision_top_{str(k + 1)}"] = top_k_mat[k] / R_count
 
         # Compute r-precision with gt
-        assert count_seq > self.R_size
+        assert count_seq >= self.R_size
         top_k_mat = torch.zeros((self.top_k,))
         for i in range(count_seq // self.R_size):
             # [bs=32, 1*256]
