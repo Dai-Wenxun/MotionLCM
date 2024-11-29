@@ -16,7 +16,7 @@ class BaseDataModule:
         sample_params.update(overrides)
         split_file = pjoin(
             eval(f"self.cfg.DATASET.{self.name.upper()}.ROOT"),
-            self.cfg.VAL.SPLIT + ".txt"
+            self.cfg.TEST.SPLIT + ".txt"
         )
         return self.Dataset(split_file=split_file, **sample_params)
 

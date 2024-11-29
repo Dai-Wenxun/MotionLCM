@@ -49,7 +49,7 @@ def load_example_input(text_path: str) -> tuple:
 def main():
     cfg = parse_args()
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    set_seed(cfg.TRAIN.SEED_VALUE)
+    set_seed(cfg.SEED_VALUE)
 
     name_time_str = osp.join(cfg.NAME, "demo_" + datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S"))
     cfg.output_dir = osp.join(cfg.TEST_FOLDER, name_time_str)
@@ -87,6 +87,7 @@ def main():
     model = MLD(cfg, dataset)
     model.to(device)
     model.eval()
+    model.requires_grad_(False)
     model.load_state_dict(state_dict)
 
     if cfg.example is not None and not is_controlnet:
