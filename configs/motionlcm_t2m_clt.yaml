@@ -1,0 +1,68 @@
+FOLDER: './experiments_t2m'
+TEST_FOLDER: './experiments_t2m_test'
+
+NAME: 'motionlcm_humanml'
+
+SEED_VALUE: 1234
+
+TEST:
+  BATCH_SIZE: 1
+  SPLIT: 'test'
+  NUM_WORKERS: 12
+
+  CHECKPOINTS: 'experiments_t2m/motionlcm_humanml/motionlcm_humanml.ckpt'
+
+  # Testing Args
+  REPLICATION_TIMES: 1
+  DIVERSITY_TIMES: 300
+  DO_MM_TEST: false
+  MAX_NUM_SAMPLES: 1024
+
+DATASET:
+  NAME: 'humanml3d'
+  SMPL_PATH: './deps/smpl'
+  WORD_VERTILIZER_PATH: './deps/glove/'
+  HUMANML3D:
+    FRAME_RATE: 20.0
+    UNIT_LEN: 4
+    ROOT: './datasets/humanml3d'
+    CONTROL_ARGS:
+      CONTROL: true
+      TEMPORAL: false
+      TRAIN_JOINTS: [0]
+      TEST_JOINTS: [0]
+      TRAIN_DENSITY: 'random'
+      TEST_DENSITY: 100
+      MEAN_STD_PATH: './datasets/humanml_spatial_norm'
+  SAMPLER:
+    MAX_LEN: 200
+    MIN_LEN: 40
+    MAX_TEXT_LEN: 20
+  PADDING_TO_MAX: false
+  WINDOW_SIZE: null
+
+METRIC:
+  DIST_SYNC_ON_STEP: true
+  TYPE: ['TM2TMetrics', 'ControlMetrics']
+
+model:
+  target: ['motion_vae', 'text_encoder', 'denoiser', 'scheduler_lcm', 'noise_optimizer']
+  latent_dim: [16, 32]
+  guidance_scale: 'dynamic'
+
+  t2m_textencoder:
+    dim_word: 300
+    dim_pos_ohot: 15
+    dim_text_hidden: 512
+    dim_coemb_hidden: 512
+
+  t2m_motionencoder:
+    dim_move_hidden: 512
+    dim_move_latent: 512
+    dim_motion_hidden: 1024
+    dim_motion_latent: 512
+
+  bert_path: './deps/distilbert-base-uncased'
+  clip_path: './deps/clip-vit-large-patch14'
+  t5_path: './deps/sentence-t5-large'
+  t2m_path: './deps/t2m/'
