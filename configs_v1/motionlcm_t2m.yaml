@@ -3,12 +3,13 @@ TEST_FOLDER: './experiments_t2m_test'
 
 NAME: 'motionlcm_humanml'
 
+SEED_VALUE: 1234
+
 TRAIN:
   BATCH_SIZE: 256
   SPLIT: 'train'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
-  SEED_VALUE: 1234
   PRETRAINED: 'experiments_t2m/mld_humanml/mld_humanml_v1.ckpt'
 
   validation_steps: -1
@@ -39,11 +40,13 @@ VAL:
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
 TEST:
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
   CHECKPOINTS: 'experiments_t2m/motionlcm_humanml/motionlcm_humanml_v1.ckpt'
 

@@ -6,15 +6,9 @@ from torch.utils.data import DataLoader
 
 
 class BaseDataModule:
-    def __init__(self, collate_fn: Callable, batch_size: int,
-                 num_workers: int, persistent_workers: bool) -> None:
+    def __init__(self, collate_fn: Callable) -> None:
         super(BaseDataModule, self).__init__()
-        self.dataloader_options = {
-            "batch_size": batch_size,
-            "num_workers": num_workers,
-            "collate_fn": collate_fn,
-            "persistent_workers": persistent_workers
-        }
+        self.collate_fn = collate_fn
         self.is_mm = False
 
     def get_sample_set(self, overrides: dict) -> Any:
@@ -40,19 +34,25 @@ class BaseDataModule:
         classname = self.__class__.__name__
         raise AttributeError(f"'{classname}' object has no attribute '{item}'")
 
+    def get_dataloader_options(self, stage: str) -> dict:
+        stage_args = eval(f"self.cfg.{stage.upper()}")
+        dataloader_options = {
+            "batch_size": stage_args.batch_size,
+            "num_workers": stage_args.NUM_WORKERS,
+            "collate_fn": self.collate_fn,
+            "persistent_workers": stage_args.PERSISTENT_WORKERS,
+        }
+        return dataloader_options
+
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.train_dataset, shuffle=True, **self.dataloader_options)
+        dataloader_options = self.get_dataloader_options('TRAIN')
+        return DataLoader(self.train_dataset, shuffle=True, **dataloader_options)
 
     def val_dataloader(self) -> DataLoader:
-        dataloader_options = self.dataloader_options.copy()
-        dataloader_options["batch_size"] = self.cfg.VAL.BATCH_SIZE
-        dataloader_options["num_workers"] = self.cfg.VAL.NUM_WORKERS
-        dataloader_options["shuffle"] = False
-        return DataLoader(self.val_dataset, **dataloader_options)
+        dataloader_options = self.get_dataloader_options('VAL')
+        return DataLoader(self.val_dataset, shuffle=False, **dataloader_options)
 
     def test_dataloader(self) -> DataLoader:
-        dataloader_options = self.dataloader_options.copy()
+        dataloader_options = self.get_dataloader_options('TEST')
         dataloader_options["batch_size"] = 1 if self.is_mm else self.cfg.TEST.BATCH_SIZE
-        dataloader_options["num_workers"] = self.cfg.TEST.NUM_WORKERS
-        dataloader_options["shuffle"] = False
-        return DataLoader(self.test_dataset, **dataloader_options)
+        return DataLoader(self.test_dataset, shuffle=False, **dataloader_options)

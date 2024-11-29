@@ -21,15 +21,9 @@ class DataModule(BaseDataModule):
                  name: str,
                  cfg: DictConfig,
                  motion_only: bool,
-                 batch_size: int,
-                 num_workers: int,
                  collate_fn: Optional[Callable] = None,
-                 persistent_workers: bool = True,
                  **kwargs) -> None:
-        super().__init__(batch_size=batch_size,
-                         num_workers=num_workers,
-                         collate_fn=collate_fn,
-                         persistent_workers=persistent_workers)
+        super().__init__(collate_fn=collate_fn)
         self.cfg = cfg
         self.name = name
         self.nfeats, self.njoints = dataset_map[name]
