@@ -64,7 +64,7 @@ DATASET:
       TRAIN_JOINTS: [0, 10, 11, 15, 20, 21]
       TEST_JOINTS: [0, 10, 11, 15, 20, 21]
       TRAIN_DENSITY: [25, 25]
-      TEST_DESITY: 25
+      TEST_DENSITY: 25
       MEAN_STD_PATH: './datasets/humanml_spatial_norm'
   SAMPLER:
     MAX_LEN: 200
