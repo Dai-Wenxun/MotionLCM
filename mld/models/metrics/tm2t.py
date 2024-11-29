@@ -77,7 +77,6 @@ class TM2TMetrics(Metric):
         # init metrics
         metrics = {metric: getattr(self, metric) for metric in self.metrics}
 
-        # cat all embeddings
         shuffle_idx = torch.randperm(count_seq)
         all_texts = dim_zero_cat(self.text_embeddings).cpu()[shuffle_idx, :]
         all_genmotions = dim_zero_cat(self.recmotion_embeddings).cpu()[shuffle_idx, :]
@@ -102,13 +101,9 @@ class TM2TMetrics(Metric):
         assert count_seq >= self.R_size
         top_k_mat = torch.zeros((self.top_k,))
         for i in range(count_seq // self.R_size):
-            # [bs=32, 1*256]
             group_texts = all_texts[i * self.R_size:(i + 1) * self.R_size]
-            # [bs=32, 1*256]
             group_motions = all_gtmotions[i * self.R_size:(i + 1) * self.R_size]
-            # [bs=32, 32]
             dist_mat = euclidean_distance_matrix(group_texts, group_motions).nan_to_num()
-            # match score
             self.gt_Matching_score += dist_mat.trace()
             argmax = torch.argsort(dist_mat, dim=1)
             top_k_mat += calculate_top_k(argmax, top_k=self.top_k).sum(axis=0)
@@ -116,7 +111,6 @@ class TM2TMetrics(Metric):
         for k in range(self.top_k):
             metrics[f"gt_R_precision_top_{str(k + 1)}"] = top_k_mat[k] / R_count
 
-        # tensor -> numpy for FID
         all_genmotions = all_genmotions.numpy()
         all_gtmotions = all_gtmotions.numpy()
 
@@ -126,7 +120,7 @@ class TM2TMetrics(Metric):
         metrics["FID"] = calculate_frechet_distance_np(gt_mu, gt_cov, mu, cov)
 
         # Compute diversity
-        assert count_seq > self.diversity_times
+        assert count_seq >= self.diversity_times
         metrics["Diversity"] = calculate_diversity_np(all_genmotions, self.diversity_times)
         metrics["gt_Diversity"] = calculate_diversity_np(all_gtmotions, self.diversity_times)
 
