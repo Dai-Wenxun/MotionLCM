@@ -84,16 +84,12 @@ class TM2TMetrics(Metric):
         all_gtmotions = dim_zero_cat(self.gtmotion_embeddings).cpu()[shuffle_idx, :]
 
         # Compute r-precision
-        assert count_seq > self.R_size
+        assert count_seq >= self.R_size
         top_k_mat = torch.zeros((self.top_k,))
         for i in range(count_seq // self.R_size):
-            # [bs=32, 1*256]
             group_texts = all_texts[i * self.R_size:(i + 1) * self.R_size]
-            # [bs=32, 1*256]
             group_motions = all_genmotions[i * self.R_size:(i + 1) * self.R_size]
-            # [bs=32, 32]
             dist_mat = euclidean_distance_matrix(group_texts, group_motions).nan_to_num()
-            # print(dist_mat[:5])
             self.Matching_score += dist_mat.trace()
             argmax = torch.argsort(dist_mat, dim=1)
             top_k_mat += calculate_top_k(argmax, top_k=self.top_k).sum(axis=0)
