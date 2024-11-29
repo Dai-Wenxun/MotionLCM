@@ -9,6 +9,7 @@ TEST:
   BATCH_SIZE: 1
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
   CHECKPOINTS: 'experiments_t2m/motionlcm_humanml/motionlcm_humanml.ckpt'
 
