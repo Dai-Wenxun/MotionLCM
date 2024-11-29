@@ -181,7 +181,7 @@ def calculate_diversity(activation: torch.Tensor, diversity_times: int) -> float
 
 def calculate_diversity_np(activation: np.ndarray, diversity_times: int) -> float:
     assert len(activation.shape) == 2
-    assert activation.shape[0] > diversity_times
+    assert activation.shape[0] >= diversity_times
     num_samples = activation.shape[0]
 
     first_indices = np.random.choice(num_samples,
