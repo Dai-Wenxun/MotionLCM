@@ -37,7 +37,7 @@ class BaseDataModule:
     def get_dataloader_options(self, stage: str) -> dict:
         stage_args = eval(f"self.cfg.{stage.upper()}")
         dataloader_options = {
-            "batch_size": stage_args.batch_size,
+            "batch_size": stage_args.BATCH_SIZE,
             "num_workers": stage_args.NUM_WORKERS,
             "collate_fn": self.collate_fn,
             "persistent_workers": stage_args.PERSISTENT_WORKERS,
