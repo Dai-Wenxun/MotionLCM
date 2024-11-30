@@ -122,12 +122,12 @@ class MLD(BaseModel):
             logger.info(f'ControlNet: {controlnet}M')
             logger.info(f'Trajectory Encoder: {traj_encoder}M')
 
-    def forward(self, batch: dict, optimize: bool = False) -> tuple:
+    def forward(self, batch: dict) -> tuple:
         texts = batch["text"]
-        feats_ref = batch.get("motion", None)
+        feats_ref = batch.get("motion")
         lengths = batch["length"]
-        hint = batch.get('hint', None)
-        hint_mask = batch.get('hint_mask', None)
+        hint = batch.get('hint')
+        hint_mask = batch.get('hint_mask')
 
         if self.do_classifier_free_guidance:
             texts = texts + [""] * len(texts)
@@ -142,18 +142,22 @@ class MLD(BaseModel):
             controlnet_cond = self.traj_encoder(hint_reshaped, hint_mask_reshaped)
 
         latents = torch.randn((len(lengths), *self.latent_dim), device=text_emb.device)
-        z = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
-
         mask = batch.get('mask', lengths_to_mask(lengths, text_emb.device))
-        with torch.no_grad():
-            feats_rst = self.vae.decode(z / self.vae_scale_factor, mask)
+
+        if hint is not None and self.dno and self.dno.optimize:
+            latents = self._optimize_latents(
+                latents, text_emb, texts, lengths, mask, hint, hint_mask,
+                controlnet_cond=controlnet_cond, feats_ref=feats_ref)
+
+        latents = self._diffusion_reverse(latents, text_emb, controlnet_cond=controlnet_cond)
+        feats_rst = self.vae.decode(latents / self.vae_scale_factor, mask)
 
         joints = self.feats2joints(feats_rst.detach().cpu())
         joints = remove_padding(joints, lengths)
 
         joints_ref = None
         if feats_ref is not None:
-            joints_ref = self.feats2joints(batch['motion'].detach().cpu())
+            joints_ref = self.feats2joints(feats_ref.detach().cpu())
             joints_ref = remove_padding(joints_ref, lengths)
 
         return joints, joints_ref

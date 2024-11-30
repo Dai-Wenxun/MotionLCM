@@ -15,7 +15,6 @@ from mld.models.modeltype.mld import MLD
 from mld.utils.utils import set_seed, move_batch_to_device
 from mld.data.humanml.utils.plot_script import plot_3d_motion
 from mld.utils.temos_utils import remove_padding
-from mld.utils.example_hint import load_hints_and_texts
 
 
 def load_example_hint_input(text_path: str) -> tuple:
@@ -90,6 +89,8 @@ def main():
     model.requires_grad_(False)
     model.load_state_dict(state_dict)
 
+    FPS = eval(f"cfg.DATASET.{cfg.DATASET.NAME.upper()}.FRAME_RATE")
+
     if cfg.example is not None and not is_controlnet:
         text, length = load_example_input(cfg.example)
         for t, l in zip(text, length):
@@ -115,46 +116,7 @@ def main():
                 logger.info(f"Motions are generated here:\n{pkl_path}")
 
                 if not cfg.no_plot:
-                    plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(), text[i], fps=20)
-
-    if cfg.example_hint is not None:
-        if not is_controlnet:
-            assert cfg.optimize and cfg.model.get('noise_optimizer') is not None
-            cfg.model.noise_optimizer.params.optimize = True
-            logger.info('Optimization enabled. Set the batch size to 1.')
-            logger.info(f'Original batch size: {cfg.TEST.BATCH_SIZE}')
-            cfg.TEST.BATCH_SIZE = 1
-
-        n_frames, control_type_ids, control_hint_ids = load_example_hint_input(cfg.example_hint)
-        texts, hints, hint_masks = load_hints_and_texts(n_frames, control_type_ids, control_hint_ids, cfg)
-
-        for rep_i in range(cfg.replication):
-            for n_frame, text, hint, hint_mask in zip(n_frames, texts, hints, hint_masks):
-                batch = {
-                    "length": n_frame, 'text': text,
-                    'hint': hint.unsqueeze(0),
-                    'hint_mask': hint_mask.unsqueeze(0)
-                }
-
-                with torch.no_grad():
-                    joints, _ = model(batch)
-
-                num_samples = len(joints)
-                batch_id = 0
-                for i in range(num_samples):
-                    res = dict()
-                    pkl_path = osp.join(vis_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
-                    res['joints'] = joints[i].detach().cpu().numpy()
-                    res['text'] = text[i]
-                    res['length'] = length[i]
-                    res['hint'] = None
-                    with open(pkl_path, 'wb') as f:
-                        pickle.dump(res, f)
-                    logger.info(f"Motions are generated here:\n{pkl_path}")
-
-                    if not cfg.no_plot:
-                        plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(), text[i], fps=20)
-
+                    plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(), text[i], fps=FPS)
 
     else:
         test_dataloader = dataset.test_dataloader()
@@ -187,7 +149,7 @@ def main():
 
                     if not cfg.no_plot:
                         plot_3d_motion(pkl_path.replace('.pkl', '.mp4'), joints[i].detach().cpu().numpy(),
-                                       text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
+                                       text[i], fps=FPS, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
 
                     if rep_i == 0:
                         res['joints'] = joints_ref[i].detach().cpu().numpy()
@@ -196,7 +158,7 @@ def main():
                         logger.info(f"Motions are generated here:\n{pkl_path.replace('.pkl', '_ref.pkl')}")
                         if not cfg.no_plot:
                             plot_3d_motion(pkl_path.replace('.pkl', '_ref.mp4'), joints_ref[i].detach().cpu().numpy(),
-                                           text[i], fps=20, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
+                                           text[i], fps=FPS, hint=hint[i].detach().cpu().numpy() if hint is not None else None)
 
 
 if __name__ == "__main__":
