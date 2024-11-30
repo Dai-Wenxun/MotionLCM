@@ -60,26 +60,10 @@ DATASET:
     CONTROL_ARGS:
       CONTROL: true
       TEMPORAL: false
-
       TRAIN_JOINTS: [0]
       TEST_JOINTS: [0]
-
-#      TRAIN_JOINTS: [0, 10, 11, 15, 20, 21]
-#      TEST_JOINTS: [0]
-#      TEST_JOINTS: [10]
-#      TEST_JOINTS: [11]
-#      TEST_JOINTS: [15]
-#      TEST_JOINTS: [20]
-#      TEST_JOINTS: [21]
-
       TRAIN_DENSITY: 'random'
-
       TEST_DENSITY: 100
-#      TEST_DENSITY: 25
-#      TEST_DENSITY: 5
-#      TEST_DENSITY: 2
-#      TEST_DENSITY: 1
-
       MEAN_STD_PATH: './datasets/humanml_spatial_norm'
   SAMPLER:
     MAX_LEN: 200
