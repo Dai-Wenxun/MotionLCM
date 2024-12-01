@@ -3,13 +3,15 @@ TEST_FOLDER: './experiments_control_test/spatial'
 
 NAME: 'motionlcm_humanml'
 
+SEED_VALUE: 1234
+
 TRAIN:
   DATASET: 'humanml3d'
   BATCH_SIZE: 128
   SPLIT: 'train'
   NUM_WORKERS: 8
   PERSISTENT_WORKERS: true
-  SEED_VALUE: 1234
+
   PRETRAINED: 'experiments_t2m/motionlcm_humanml/motionlcm_humanml.ckpt'
 
   validation_steps: -1
@@ -33,12 +35,14 @@ VAL:
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
 TEST:
   DATASET: 'humanml3d'
   BATCH_SIZE: 1
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
   CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_root.ckpt'
   # CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_multi.ckpt'
