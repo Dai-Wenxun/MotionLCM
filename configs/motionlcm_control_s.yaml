@@ -39,7 +39,7 @@ VAL:
 
 TEST:
   DATASET: 'humanml3d'
-  BATCH_SIZE: 1
+  BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
   PERSISTENT_WORKERS: true
