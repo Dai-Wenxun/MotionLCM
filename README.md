@@ -28,16 +28,7 @@
 
 ## 🤩 Abstract
 
-> This work introduces MotionLCM, extending controllable motion generation to a real-time level. 
-Existing methods for spatial control in text-conditioned motion generation suffer from significant runtime inefficiency. 
-To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, 
-building upon the latent diffusion model (MLD). By employing one-step (or few-step) inference, 
-we further improve the runtime efficiency of the motion latent diffusion model for motion generation. 
-To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM 
-and enable explicit control signals (e.g., pelvis trajectory) in the vanilla motion space to control the generation process directly, 
-similar to controlling other latent-free diffusion models for motion generation. By employing these techniques, 
-our approach can generate human motions with text and control signals in real-time. 
-Experimental results demonstrate the remarkable generation and controlling capabilities of MotionLCM while maintaining real-time runtime efficiency.
+> This work introduces MotionLCM, extending controllable motion generation to a real-time level. Existing methods for spatial-temporal control in text-conditioned motion generation suffer from significant runtime inefficiency. To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, building upon the latent diffusion model. By adopting one-step (or few-step) inference, we further improve the runtime efficiency of the motion latent diffusion model for motion generation. To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM and enable explicit control signals (e.g., initial poses) in the vanilla motion space to further provide supervision for the training process. By employing these techniques, our approach can generate human motions with text and control signals in real-time. Experimental results demonstrate the remarkable generation and controlling capabilities of MotionLCM while maintaining real-time runtime efficiency.
 
 ## 📢 News
 
@@ -111,7 +102,7 @@ Run the script to download the pretrained models:
 bash prepare/download_pretrained_models.sh
 ```
 
-The folders `experiments_t2m` and `experiments_control` store pretrained models for text-to-motion and motion control respectively.
+The folders `experiments_recons` `experiments_t2m` and `experiments_control` store pretrained models for motion reconstruction, text-to-motion and motion control respectively.
 
 </details>
 
@@ -131,8 +122,6 @@ Please refer to [HumanML3D](https://github.com/EricGuo5513/HumanML3D) for text-t
 cp -r ../HumanML3D/HumanML3D ./datasets/humanml3d
 ```
 
-The unofficial method of data preparation can be found in this [issue](https://github.com/Dai-Wenxun/MotionLCM/issues/6).
-
 </details>
 
 <details>
@@ -143,6 +132,7 @@ After the whole setup pipeline, the folder structure will look like:
 ```
 MotionLCM
 ├── configs
+├── configs_v1
 ├── datasets
 │   ├── humanml3d
 │   │   ├── new_joint_vecs
@@ -160,15 +150,24 @@ MotionLCM
 |   ├── smpl_models
 │   └── t2m
 ├── experiments_control
-│   ├── mld_humanml
-│   │   └── mld_humanml.ckpt
-│   └── motionlcm_humanml
-│       └── motionlcm_humanml.ckpt
+│   ├── spatial
+│   │   └── motionlcm_humanml
+│   │       ├── motionlcm_humanml_s_multi.ckpt
+│   │       └── motionlcm_humanml_s_root.ckpt
+│   └── temproal
+│   │   └── motionlcm_humanml
+│   │       ├── motionlcm_humanml_t.ckpt
+│   │       └── motionlcm_humanml_t_v1.ckpt
+├── experiments_recons
+│   └── vae_humanml
+│       └── vae_humanml.ckpt
 ├── experiments_t2m
 │   ├── mld_humanml
-│   │   └── mld_humanml.ckpt
+│   │   ├── mld_humanml.ckpt
+│   │   └── mld_humanml_v1.ckpt
 │   └── motionlcm_humanml
-│       └── motionlcm_humanml.ckpt
+│       ├── motionlcm_humanml.ckpt
+│       └── motionlcm_humanml_v1.ckpt
 ├── ...
 ```
 
@@ -176,38 +175,43 @@ MotionLCM
 
 ## 🎬 Demo
 
-MotionLCM provides two main functionalities: text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions. The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
+MotionLCM provides three main functionalities: motion reconstruction, text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions. The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
 
 <details>
-  <summary><b> 1. Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
-
-If you haven't completed `5. Prepare the datasets` in `👨‍🏫 Quick Start`, make sure to use the following command to download a tiny humanml3d dataset. The model instantiation requires the motion feature dimension of the dataset.
+  <summary><b> 1. Motion Reconstruction (using GT motions from HumanML3D test set) </b></summary>
 
 ```
-bash prepare/prepare_tiny_humanml3d.sh
+python demo.py --cfg configs/vae.yaml
 ```
 
-Then, run the demo:
+</details>
+
+
+<details>
+  <summary><b> 2. Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
 
 ```
+python demo.py --cfg configs/mld_t2m.yaml --example assets/example.txt
 python demo.py --cfg configs/motionlcm_t2m.yaml --example assets/example.txt
 ```
 
 </details>
 
 <details>
-  <summary><b> 2. Text-to-Motion (using prompts from HumanML3D test set) </b></summary>
+  <summary><b> 3. Text-to-Motion (using prompts from HumanML3D test set) </b></summary>
 
 ```
+python demo.py --cfg configs/mld_t2m.yaml
 python demo.py --cfg configs/motionlcm_t2m.yaml
 ```
 </details>
 
 <details>
-  <summary><b> 3. Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
+  <summary><b> 5. Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
 
 ```
-python demo.py --cfg configs/motionlcm_control.yaml
+python demo.py --cfg configs/motionlcm_t2m_clt.yaml --optimize
+python demo.py --cfg configs/motionlcm_control_s.yaml
 ```
 
 </details>
@@ -315,7 +319,7 @@ The parameters required for model training and testing are recorded in the corre
 <details>
   <summary><b> 2. Train MotionLCM and motion ControlNet </b></summary>
 
-#### 2.1. Ready to train motion VAE and MLD (optional)
+#### 2.1. Ready to train motion VAE and MLD
 
 Please update the parameters in `configs/vae.yaml` and `configs/mld_t2m.yaml`. Then, run the following commands:
 
@@ -324,11 +328,9 @@ python -m train_vae --cfg configs/vae.yaml
 python -m train_mld --cfg configs/mld_t2m.yaml
 ```
 
-This step is **OPTIONAL** since we provide pre-trained models for training MotionLCM and motion ControlNet.
-
 #### 2.2. Ready to train MotionLCM
 
-Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command (**13GB usage**):
+Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command:
 
 ```
 python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
@@ -336,10 +338,10 @@ python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
 
 #### 2.3. Ready to train motion ControlNet
 
-Please update the parameters in `configs/motionlcm_control.yaml`. Then, run the following command (**16GB usage**):
+Please update the parameters in `configs/motionlcm_control_s.yaml`. Then, run the following command:
 
 ```
-python -m train_motion_control --cfg configs/motionlcm_control.yaml
+python -m train_motion_control --cfg configs/motionlcm_control_s.yaml
 ```
 
 </details>
@@ -347,9 +349,13 @@ python -m train_motion_control --cfg configs/motionlcm_control.yaml
 <details>
   <summary><b> 3. Evaluate the model </b></summary>
 
+Motion 
+
+
 Text-to-Motion: 
 
 ```
+python -m test --cfg configs/mld_t2m.yaml
 python -m test --cfg configs/motionlcm_t2m.yaml
 ```
 
@@ -359,28 +365,6 @@ Motion Control:
 python -m test --cfg configs/motionlcm_control.yaml
 ```
 
-</details>
-
-## 📊 Results
-
-We provide the quantitative and qualitative results in the paper. 
-
-<details>
-  <summary><b> Text-to-Motion (quantitative)  </b></summary>
-
-<img src="assets/quantitative_t2m.png" alt="example" width="100%">
-</details>
-
-<details>
-  <summary><b> Text-to-Motion (qualitative)  </b></summary>
-
-<img src="assets/qualitative_t2m.png" alt="example" width="100%">
-</details>
-
-<details>
-  <summary><b> Motion Control (quantitative)  </b></summary>
-
-<img src="assets/quantitative_mc.png" alt="example" width="100%">
 </details>
 
 ## 🌹 Acknowledgement
