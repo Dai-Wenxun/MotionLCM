@@ -32,7 +32,7 @@
 
 ## 
 
-![](assets/pk.png)
+![](assets/pk_v2.png)
 
 ## 📢 News
 
