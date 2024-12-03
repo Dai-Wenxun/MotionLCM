@@ -17,6 +17,8 @@ from mld.utils.utils import set_seed, move_batch_to_device
 from mld.data.humanml.utils.plot_script import plot_3d_motion
 from mld.utils.temos_utils import remove_padding
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 
 def load_example_hint_input(text_path: str) -> tuple:
     with open(text_path, "r") as f:
