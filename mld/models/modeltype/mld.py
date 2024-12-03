@@ -284,7 +284,7 @@ class MLD(BaseModel):
                 guidance_scale_tensor, embedding_dim=self.denoiser.time_cond_proj_dim
             ).to(device=latents.device, dtype=latents.dtype)
 
-        if self.do_classifier_free_guidance and not self.guess_mode:
+        if self.is_controlnet and self.do_classifier_free_guidance and not self.guess_mode:
             controlnet_cond = torch.cat([controlnet_cond] * 2)
 
         for i, t in tqdm.tqdm(enumerate(timesteps)):
