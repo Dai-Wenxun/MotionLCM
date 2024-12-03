@@ -35,12 +35,14 @@ VAL:
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
 TEST:
   DATASET: 'humanml3d'
   BATCH_SIZE: 32
   SPLIT: 'test'
   NUM_WORKERS: 12
+  PERSISTENT_WORKERS: true
 
   CHECKPOINTS: 'experiments_control/temporal/motionlcm_humanml/motionlcm_humanml_t.ckpt'
 
