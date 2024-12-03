@@ -123,13 +123,12 @@ def main():
 
         for rep_i in range(cfg.replication):
             with torch.no_grad():
-                joints, _ = model(batch)
+                joints = model(batch)[0]
 
             num_samples = len(joints)
-            batch_id = 0
             for i in range(num_samples):
                 res = dict()
-                pkl_path = osp.join(vis_dir, f"batch_id_{batch_id}_sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
+                pkl_path = osp.join(vis_dir, f"sample_id_{i}_length_{length[i]}_rep_{rep_i}.pkl")
                 res['joints'] = joints[i].detach().cpu().numpy()
                 res['text'] = text[i]
                 res['length'] = length[i]
