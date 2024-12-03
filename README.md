@@ -177,7 +177,7 @@ MotionLCM
 
 </details>
 
-## 🚨 Following is based on MotionLCM-V2.
+## 🚨 Following is based on MotionLCM-V2 (Check `configs_v1` for V1).
 
 ## 🎬 Demo
 
