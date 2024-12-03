@@ -321,8 +321,8 @@ We provide the training guidance for motion reconstruction, text-to-motion and m
 
 The parameters required for model training and testing are recorded in the corresponding YAML file (e.g., `configs/motionlcm_t2m.yaml`). Below are some of the important parameters in the file:
 
-- `${FOLDER}`: The folder for the specific training task (i.e., `experiments_t2m` and `experiments_control`).
-- `${TEST_FOLDER}`: The folder for the specific testing task (i.e., `experiments_t2m_test` and `experiments_control_test`).
+- `${FOLDER}`: The folder for the specific training task (i.e., `experiments_recons`, `experiments_t2m` and `experiments_control`).
+- `${TEST_FOLDER}`: The folder for the specific testing task (i.e., `experiments_recons_test`, `experiments_t2m_test` and `experiments_control_test`).
 - `${NAME}`: The name of the model (e.g., `motionlcm_humanml`). `${FOLDER}`, `${NAME}`, and the current timestamp constitute the training output folder (for example, `experiments_t2m/motionlcm_humanml/2024-04-06T23-05-07`). The same applies to `${TEST_FOLDER}` for testing.
 - `${TRAIN.PRETRAINED}`: The path of the pre-trained model.
 - `${TEST.CHECKPOINTS}`: The path of the testing model.
