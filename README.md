@@ -213,7 +213,7 @@ python demo.py --cfg configs/motionlcm_t2m.yaml
 </details>
 
 <details>
-  <summary><b> 5. Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
+  <summary><b> 4. Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
 
 The following command is for MotionLCM with motion ControlNet.
 
@@ -230,7 +230,7 @@ python demo.py --cfg configs/motionlcm_t2m_clt.yaml --optimize
 </details>
 
 <details>
-  <summary><b> 4. Render SMPL </b></summary>
+  <summary><b> 5. Render SMPL </b></summary>
 
 After running the demo, the output folder will store the stick figure animation for each generated motion (e.g., `assets/example.gif`).
 
@@ -330,9 +330,7 @@ The parameters required for model training and testing are recorded in the corre
 </details>
 
 <details>
-  <summary><b> 2. Train MotionLCM and motion ControlNet </b></summary>
-
-#### 2.1. Ready to train motion VAE and MLD
+  <summary><b> 2. Train motion VAE and MLD </b></summary>
 
 Please update the parameters in `configs/vae.yaml` and `configs/mld_t2m.yaml`. Then, run the following commands:
 
@@ -341,7 +339,12 @@ python -m train_vae --cfg configs/vae.yaml
 python -m train_mld --cfg configs/mld_t2m.yaml
 ```
 
-#### 2.2. Ready to train MotionLCM
+</details>
+
+<details>
+  <summary><b> 3. Train MotionLCM and motion ControlNet </b></summary>
+
+#### 2.1. Ready to train MotionLCM
 
 Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command:
 
@@ -349,7 +352,7 @@ Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the
 python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
 ```
 
-#### 2.3. Ready to train motion ControlNet
+#### 2.2. Ready to train motion ControlNet
 
 Please update the parameters in `configs/motionlcm_control_s.yaml`. Then, run the following command:
 
@@ -357,10 +360,41 @@ Please update the parameters in `configs/motionlcm_control_s.yaml`. Then, run th
 python -m train_motion_control --cfg configs/motionlcm_control_s.yaml
 ```
 
+This command by default uses the `Pelvis` (i.e., root) joint for motion control training. If you want to utilize all the joints defined in OmniControl (i.e., `Pelvis`, `Left foot`, `Right foot`, `Head`, `Left wrist`, and `Right wrist`), you need to modify the `TRAIN_JOINTS` in `DATASET.HUMANML3D.CONTROL_ARGS` in the `configs/motionlcm_control_s.yaml`.
+
+```
+TRAIN_JOINTS: [0] -> [0, 10, 11, 15, 20, 21]
+```
+
+This is also the reason we provide two checkpoints in `experiments_control/spatial/motionlcm_humanml`.
+
+```
+CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_root.ckpt'  # Trained on Pelvis
+CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_multi.ckpt'  #  Trained on All
+```
+
+During validation, the default testing joint is `Pelvis`, and the testing density is `100`.
+
+```
+TEST_JOINTS: [0]  # choice -> [0, 10, 11, 15, 20, 21]
+TEST_DENSITY: 100  # choice -> [100, 25, 5, 2, 1]
+```
+
+`DENSITY` refers to the density level of control points selected from the ground truth (GT) trajectory. Specifically, `100` and `25` correspond to percentage, while `5`, `2`, and `1` correspond to number.
+```python
+# MotionLCM/mld/data/humanml/dataset.py (Text2MotionDataset)
+length = joints.shape[0]
+density = self.testing_density
+if density in [1, 2, 5]:
+    choose_seq_num = density
+else:
+    choose_seq_num = int(length * density / 100)
+```
+
 </details>
 
 <details>
-  <summary><b> 3. Evaluate the model </b></summary>
+  <summary><b> 4. Evaluate the models </b></summary>
 
 Motion 
 
