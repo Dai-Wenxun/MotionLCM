@@ -314,7 +314,7 @@ You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the mi
 
 ## 🚀 Train your own models
 
-We provide the training guidance for both text-to-motion and motion control tasks. The following steps will guide you through the training process.
+We provide the training guidance for motion reconstruction, text-to-motion and motion control tasks. The following steps will guide you through the training process.
 
 <details>
   <summary><b> 1. Important args in the config yaml </b></summary>
