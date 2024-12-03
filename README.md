@@ -350,7 +350,7 @@ python -m train_mld --cfg configs/mld_t2m.yaml
 <details>
   <summary><b> 3. Train MotionLCM and motion ControlNet </b></summary>
 
-#### 2.1. Ready to train MotionLCM
+#### 3.1. Ready to train MotionLCM
 
 Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the following command:
 
@@ -358,7 +358,7 @@ Please first check the parameters in `configs/motionlcm_t2m.yaml`. Then, run the
 python -m train_motionlcm --cfg configs/motionlcm_t2m.yaml
 ```
 
-#### 2.2. Ready to train motion ControlNet
+#### 3.2. Ready to train motion ControlNet
 
 Please update the parameters in `configs/motionlcm_control_s.yaml`. Then, run the following command:
 
@@ -403,22 +403,27 @@ else:
 <details>
   <summary><b> 4. Evaluate the models </b></summary>
 
-Motion Reconstruction:
+#### 4.1. Motion Reconstruction:
 
 ```
 python -m test --cfg configs/vae.yaml
 ```
 
-Text-to-Motion: 
+#### 4.2. Text-to-Motion: 
 
 ```
 python -m test --cfg configs/mld_t2m.yaml
 python -m test --cfg configs/motionlcm_t2m.yaml
 ```
 
-If you want to change the number of inference steps, for MLD, modify the `num_inference_steps` in `configs/modules/scheduler_ddim.yaml`, and for MotionLCM, modify the `num_inference_steps` in `configs/modules/scheduler_lcm.yaml`.
+If you want to change the number of inference steps, change the `num_inference_steps` in the following configs:
 
-Motion Control:
+```
+configs/modules/scheduler_ddim.yaml  # MLD
+configs/modules/scheduler_lcm.yaml   # MotionLCM
+```
+
+#### 4.3. Motion Control:
 
 The following command is for MotionLCM with motion ControlNet.
 
