@@ -7,7 +7,7 @@ gdown --fuzzy https://drive.google.com/file/d/1U7homKobR2gaDLfL5flS3N0g7e0a_AQd/
 unzip experiments_t2m.zip
 
 echo -e "Downloading experiments_control!"
-gdown --fuzzy https://drive.google.com/file/d/13NiRg0xpd2aDAG0ZNu1nenJ6ElkDVmYI/view?usp=sharing
+gdown --fuzzy https://drive.google.com/file/d/1o6oFdH5dgQJNB5J2rDGKCMw3FDr9gUkW/view?usp=sharing
 unzip experiments_control.zip
 
 rm experiments_recons.zip
