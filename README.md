@@ -156,22 +156,22 @@ MotionLCM
 ├── experiments_control
 │   ├── spatial
 │   │   └── motionlcm_humanml
-│   │       ├── motionlcm_humanml_s_multi.ckpt
-│   │       └── motionlcm_humanml_s_root.ckpt
+│   │       ├── motionlcm_humanml_s_all.ckpt
+│   │       └── motionlcm_humanml_s_pelvis.ckpt
 │   └── temproal
 │   │   └── motionlcm_humanml
-│   │       ├── motionlcm_humanml_t.ckpt
-│   │       └── motionlcm_humanml_t_v1.ckpt
+│   │       ├── motionlcm_humanml_t_v1.ckpt
+│   │       └── motionlcm_humanml_t.ckpt
 ├── experiments_recons
 │   └── vae_humanml
 │       └── vae_humanml.ckpt
 ├── experiments_t2m
 │   ├── mld_humanml
-│   │   ├── mld_humanml.ckpt
-│   │   └── mld_humanml_v1.ckpt
+│   │   ├── mld_humanml_v1.ckpt
+│   │   └── mld_humanml.ckpt
 │   └── motionlcm_humanml
-│       ├── motionlcm_humanml.ckpt
-│       └── motionlcm_humanml_v1.ckpt
+│       ├── motionlcm_humanml_v1.ckpt
+│       └── motionlcm_humanml.ckpt
 ├── ...
 ```
 

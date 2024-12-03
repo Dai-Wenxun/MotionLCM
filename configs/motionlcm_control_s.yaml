@@ -44,8 +44,8 @@ TEST:
   NUM_WORKERS: 12
   PERSISTENT_WORKERS: true
 
-  CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_root.ckpt'
-  # CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_multi.ckpt'
+  CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_pelvis.ckpt'
+  # CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_all.ckpt'
 
   # Testing Args
   REPLICATION_TIMES: 1
