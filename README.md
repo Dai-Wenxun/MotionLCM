@@ -180,7 +180,7 @@ MotionLCM provides three main functionalities: motion reconstruction, text-to-mo
 If you haven't completed the data preparation in `👨‍🏫 Quick Start`, make sure to use the following command to download a tiny humanml3d dataset.
 
 ```
-bash prepare_tiny_humanml3d.sh
+bash prepare/prepare_tiny_humanml3d.sh
 ```
 
 <details>
