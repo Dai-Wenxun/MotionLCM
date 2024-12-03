@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from mld.data.base import BaseDataModule
 from mld.config import instantiate_from_config
-from mld.utils.temos_utils import lengths_to_mask
+from mld.utils.temos_utils import lengths_to_mask, remove_padding
 from mld.utils.utils import count_parameters, get_guidance_scale_embedding, extract_into_tensor, sum_flat
 from .base import BaseModel
 
@@ -60,6 +60,24 @@ class VAE(BaseModel):
         logger.info(f'VAE Encoder: {count_parameters(self.vae.encoder)}M')
         logger.info(f'VAE Decoder: {count_parameters(self.vae.decoder)}M')
 
+    def forward(self, batch: dict) -> tuple:
+        feats_ref = batch['motion']
+        lengths = batch["length"]
+        mask = batch['mask']
+
+        z, dist_m = self.vae.encode(feats_ref, mask)
+        feats_rst = self.vae.decode(z, mask)
+
+        joints = self.feats2joints(feats_rst.detach().cpu())
+        joints = remove_padding(joints, lengths)
+
+        joints_ref = None
+        if feats_ref is not None:
+            joints_ref = self.feats2joints(feats_ref.detach().cpu())
+            joints_ref = remove_padding(joints_ref, lengths)
+
+        return joints, joints_ref
+
     def loss_calculate(self, a: torch.Tensor, b: torch.Tensor, loss_type: str,
                        mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         mask = None if not self.mask_loss else mask
@@ -77,11 +95,9 @@ class VAE(BaseModel):
         return loss.mean()
 
     def train_vae_forward(self, batch: dict) -> dict:
-        lengths = batch["length"]
         feats_ref = batch['motion']
+        mask = batch['mask']
 
-        padding_to_max_length = feats_ref.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-        mask = lengths_to_mask(lengths, feats_ref.device, max_len=padding_to_max_length)
         z, dist_m = self.vae.encode(feats_ref, mask)
         feats_rst = self.vae.decode(z, mask)
 
@@ -120,6 +136,7 @@ class VAE(BaseModel):
 
     def t2m_eval(self, batch: dict) -> dict:
         feats_ref_ori = batch["motion"]
+        mask = batch['mask']
         lengths = batch["length"]
         word_embs = batch["word_embs"]
         pos_ohot = batch["pos_ohot"]
@@ -128,8 +145,6 @@ class VAE(BaseModel):
         start = time.time()
 
         vae_st_e = time.time()
-        padding_to_max_length = feats_ref_ori.shape[1] if self.cfg.DATASET.PADDING_TO_MAX else None
-        mask = lengths_to_mask(lengths, feats_ref_ori.device, max_len=padding_to_max_length)
         z, dist_m = self.vae.encode(feats_ref_ori, mask)
         vae_et_e = time.time()
         self.vae_encode_times.append(vae_et_e - vae_st_e)
