@@ -40,7 +40,8 @@ def load_example_input(text_path: str) -> tuple:
     texts, lens = [], []
     for line in lines:
         s = line.strip()
-        s_l, s_t = s.split(" ")
+        s_l = s.split(" ")[0]
+        s_t = s[(len(s_l) + 1):]
         lens.append(int(s_l))
         texts.append(s_t)
     return texts, lens
