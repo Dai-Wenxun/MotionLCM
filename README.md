@@ -96,13 +96,13 @@ bash prepare/download_smpl_models.sh
 <details>
   <summary><b> 3. Pretrained models </b></summary>
 
-Run the script to download the pretrained models:
+Run the script to download the pre-trained models:
 
 ```
 bash prepare/download_pretrained_models.sh
 ```
 
-The folders `experiments_recons` `experiments_t2m` and `experiments_control` store pretrained models for motion reconstruction, text-to-motion and motion control respectively.
+The folders `experiments_recons` `experiments_t2m` and `experiments_control` store pre-trained models for motion reconstruction, text-to-motion and motion control respectively.
 
 </details>
 
@@ -175,7 +175,13 @@ MotionLCM
 
 ## 🎬 Demo
 
-MotionLCM provides three main functionalities: motion reconstruction, text-to-motion and motion control. The following commands demonstrate how to use the pretrained models to generate motions. The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
+MotionLCM provides three main functionalities: motion reconstruction, text-to-motion and motion control. The following commands demonstrate how to use the pre-trained models to generate motions. The outputs will be stored in `${cfg.TEST_FOLDER} / ${cfg.NAME} / demo_${timestamp}` (`experiments_t2m_test/motionlcm_humanml/demo_2024-04-06T23-05-07`).
+
+If you haven't completed the data preparation in `👨‍🏫 Quick Start`, make sure to use the following command to download a tiny humanml3d dataset.
+
+```
+bash prepare_tiny_humanml3d.sh
+```
 
 <details>
   <summary><b> 1. Motion Reconstruction (using GT motions from HumanML3D test set) </b></summary>
@@ -311,7 +317,7 @@ The parameters required for model training and testing are recorded in the corre
 - `${FOLDER}`: The folder for the specific training task (i.e., `experiments_t2m` and `experiments_control`).
 - `${TEST_FOLDER}`: The folder for the specific testing task (i.e., `experiments_t2m_test` and `experiments_control_test`).
 - `${NAME}`: The name of the model (e.g., `motionlcm_humanml`). `${FOLDER}`, `${NAME}`, and the current timestamp constitute the training output folder (for example, `experiments_t2m/motionlcm_humanml/2024-04-06T23-05-07`). The same applies to `${TEST_FOLDER}` for testing.
-- `${TRAIN.PRETRAINED}`: The path of the pretrained model.
+- `${TRAIN.PRETRAINED}`: The path of the pre-trained model.
 - `${TEST.CHECKPOINTS}`: The path of the testing model.
 
 </details>
