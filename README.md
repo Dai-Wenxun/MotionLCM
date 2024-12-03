@@ -360,7 +360,7 @@ Please update the parameters in `configs/motionlcm_control_s.yaml`. Then, run th
 python -m train_motion_control --cfg configs/motionlcm_control_s.yaml
 ```
 
-This command by default uses the `Pelvis` (i.e., root) joint for motion control training. If you want to utilize all the joints defined in OmniControl (i.e., `Pelvis`, `Left foot`, `Right foot`, `Head`, `Left wrist`, and `Right wrist`), you need to modify the `TRAIN_JOINTS` in `DATASET.HUMANML3D.CONTROL_ARGS` in the `configs/motionlcm_control_s.yaml`.
+This command by default uses the `Pelvis` joint for motion control training. If you want to utilize all the joints defined in OmniControl (i.e., `Pelvis`, `Left foot`, `Right foot`, `Head`, `Left wrist`, and `Right wrist`), you need to modify the `TRAIN_JOINTS` in `DATASET.HUMANML3D.CONTROL_ARGS` in the `configs/motionlcm_control_s.yaml`.
 
 ```
 TRAIN_JOINTS: [0] -> [0, 10, 11, 15, 20, 21]
@@ -369,18 +369,19 @@ TRAIN_JOINTS: [0] -> [0, 10, 11, 15, 20, 21]
 This is also the reason we provide two checkpoints in `experiments_control/spatial/motionlcm_humanml`.
 
 ```
-CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_root.ckpt'  # Trained on Pelvis
-CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_multi.ckpt'  #  Trained on All
+CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_pelvis.ckpt'  # Trained on Pelvis
+CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_all.ckpt'  #  Trained on All
 ```
 
 During validation, the default testing joint is `Pelvis`, and the testing density is `100`.
 
 ```
-TEST_JOINTS: [0]  # choice -> [0, 10, 11, 15, 20, 21]
+TEST_JOINTS: [0]  # choice -> [0, 10, 11, 15, 20, 21] (when trained on all)
 TEST_DENSITY: 100  # choice -> [100, 25, 5, 2, 1]
 ```
 
-`DENSITY` refers to the density level of control points selected from the ground truth (GT) trajectory. Specifically, `100` and `25` correspond to percentage, while `5`, `2`, and `1` correspond to number.
+`DENSITY` refers to the density level of control points selected from the ground truth (GT) trajectory.
+Specifically, `100` and `25` correspond to percentage, while `5`, `2`, and `1` correspond to number.
 ```python
 # MotionLCM/mld/data/humanml/dataset.py (Text2MotionDataset)
 length = joints.shape[0]
