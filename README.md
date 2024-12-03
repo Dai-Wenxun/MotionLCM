@@ -372,7 +372,7 @@ This command by default uses the `Pelvis` joint for motion control training. If 
 TRAIN_JOINTS: [0] -> [0, 10, 11, 15, 20, 21]
 ```
 
-This is also the reason we provide two checkpoints in `experiments_control/spatial/motionlcm_humanml`.
+This is also the reason we provide two checkpoints for testing in `experiments_control/spatial/motionlcm_humanml`.
 
 ```
 CHECKPOINTS: 'experiments_control/spatial/motionlcm_humanml/motionlcm_humanml_s_pelvis.ckpt'  # Trained on Pelvis
