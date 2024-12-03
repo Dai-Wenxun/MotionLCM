@@ -12,6 +12,7 @@ import torch
 from mld.config import parse_args
 from mld.data.get_data import get_dataset
 from mld.models.modeltype.mld import MLD
+from mld.models.modeltype.vae import VAE
 from mld.utils.utils import set_seed, move_batch_to_device
 from mld.data.humanml.utils.plot_script import plot_3d_motion
 from mld.utils.temos_utils import remove_padding
@@ -69,25 +70,46 @@ def main():
     state_dict = torch.load(cfg.TEST.CHECKPOINTS, map_location="cpu")["state_dict"]
     logger.info("Loading checkpoints from {}".format(cfg.TEST.CHECKPOINTS))
 
-    lcm_key = 'denoiser.time_embedding.cond_proj.weight'
+    # Step 1: Check if the checkpoint is VAE-based.
+    is_vae = False
+    vae_key = 'vae.skel_embedding.weight'
+    if vae_key in state_dict:
+        is_vae = True
+    logger.info(f'Is VAE: {is_vae}')
+
+    # Step 2: Check if the checkpoint is MLD-based.
+    is_mld = False
+    mld_key = 'denoiser.time_embedding.linear_1.weight'
+    if mld_key in state_dict:
+        is_mld = True
+    logger.info(f'Is MLD: {is_mld}')
+
+    # Step 3: Check if the checkpoint is LCM-based.
     is_lcm = False
+    lcm_key = 'denoiser.time_embedding.cond_proj.weight'  # unique key for CFG
     if lcm_key in state_dict:
         is_lcm = True
         time_cond_proj_dim = state_dict[lcm_key].shape[1]
         cfg.model.denoiser.params.time_cond_proj_dim = time_cond_proj_dim
     logger.info(f'Is LCM: {is_lcm}')
 
+    # Step 4: Check if the checkpoint is Controlnet-based.
     cn_key = "controlnet.controlnet_cond_embedding.0.weight"
     is_controlnet = True if cn_key in state_dict else False
     cfg.model.is_controlnet = is_controlnet
     logger.info(f'Is Controlnet: {is_controlnet}')
 
+    if is_mld or is_lcm or is_controlnet:
+        target_model_class = MLD
+    else:
+        target_model_class = VAE
+
     dataset = get_dataset(cfg)
-    model = MLD(cfg, dataset)
+    model = target_model_class(cfg, dataset)
     model.to(device)
     model.eval()
     model.requires_grad_(False)
-    model.load_state_dict(state_dict)
+    logger.info(model.load_state_dict(state_dict))
 
     FPS = eval(f"cfg.DATASET.{cfg.DATASET.NAME.upper()}.FRAME_RATE")
 
