@@ -343,7 +343,7 @@ class MLD(BaseModel):
         noise = torch.randn_like(latents)
         bsz = latents.shape[0]
 
-        if self.lcm_num_ddim_timesteps is not None:
+        if self.denoiser.time_cond_proj_dim is not None and self.lcm_num_ddim_timesteps is not None:
             step_size = self.scheduler.config.num_train_timesteps // self.lcm_num_ddim_timesteps
             candidate_timesteps = torch.arange(
                 start=step_size - 1,
