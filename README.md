@@ -215,9 +215,16 @@ python demo.py --cfg configs/motionlcm_t2m.yaml
 <details>
   <summary><b> 5. Motion Control (using prompts and trajectory from HumanML3D test set) </b></summary>
 
+The following command is for MotionLCM with motion ControlNet.
+
+```
+python demo.py --cfg configs/motionlcm_control_s.yaml
+```
+
+The following command is for MotionLCM with consistency latent tuning (CLT).
+
 ```
 python demo.py --cfg configs/motionlcm_t2m_clt.yaml --optimize
-python demo.py --cfg configs/motionlcm_control_s.yaml
 ```
 
 </details>
