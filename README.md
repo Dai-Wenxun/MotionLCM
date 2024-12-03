@@ -403,8 +403,11 @@ else:
 <details>
   <summary><b> 4. Evaluate the models </b></summary>
 
-Motion 
+Motion Reconstruction:
 
+```
+python -m test --cfg configs/vae.yaml
+```
 
 Text-to-Motion: 
 
@@ -413,11 +416,25 @@ python -m test --cfg configs/mld_t2m.yaml
 python -m test --cfg configs/motionlcm_t2m.yaml
 ```
 
+If you want to change the number of inference steps, for MLD, modify the `num_inference_steps` in `configs/modules/scheduler_ddim.yaml`, and for MotionLCM, modify the `num_inference_steps` in `configs/modules/scheduler_lcm.yaml`.
+
 Motion Control:
 
+The following command is for MotionLCM with motion ControlNet.
+
 ```
-python -m test --cfg configs/motionlcm_control.yaml
+python -m test --cfg configs/motionlcm_control_s.yaml
 ```
+
+The following command is for MotionLCM with consistency latent tuning (CLT).
+
+```
+python -m test --cfg configs/motionlcm_t2m_clt.yaml --optimize
+```
+
+For CLT, we default to using `num_inference_steps=1` and `batch_size=1`. **Do not modify these two parameters.**
+
+For our default motion control test (i.e., simply run the commands above), it is based on the `pelvis` joint with `density=100`. If you want to obtain complete results, please adjust the testing joint and testing density according to the motion control training tutorial.
 
 </details>
 
