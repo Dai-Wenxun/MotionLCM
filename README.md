@@ -443,6 +443,32 @@ For our default motion control test (i.e., simply run the commands above), it is
 
 </details>
 
+## 📊 Results
+
+We provide the quantitative and qualitative results in the paper. 
+
+<details>
+  <summary><b> Text-to-Motion (quantitative)  </b></summary>
+
+<img src="assets/quantitative_t2m.png" alt="example" width="100%">
+</details>
+
+<details>
+  <summary><b> Text-to-Motion (qualitative)  </b></summary>
+
+TBD
+
+</details>
+
+<details>
+  <summary><b> Motion Control (quantitative)  </b></summary>
+
+TBD
+
+</details>
+
+
+
 ## 🌹 Acknowledgement
 
 We would like to thank the authors of the following repositories for their excellent work: 
