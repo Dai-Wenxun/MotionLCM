@@ -45,11 +45,11 @@ This section provides a quick start guide to set up the environment and run the 
   <summary><b> 1. Conda environment </b></summary>
 
 ```
-conda create python=3.10 --name motionlcm
+conda create python=3.10.12 --name motionlcm
 conda activate motionlcm
 ```
 
-Install the packages in `requirements.txt` and install [PyTorch 1.13.1](https://pytorch.org/).
+Install the packages in `requirements.txt`.
 
 ```
 pip install -r requirements.txt
