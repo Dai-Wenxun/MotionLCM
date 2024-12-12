@@ -36,6 +36,7 @@
 
 ## 📢 News
 
+- **[2024/12/12]** Release MotionLCM-V2 and [Hugging Face Blog](https://huggingface.co/blog/wxDai/motionlcm-v2).
 - **[2024/08/15]** Support the training of motion latent diffusion model (MLD).
 - **[2024/08/09]** Support the training of motion VAE.
 - **[2024/07/02]** MotionLCM is officially accepted by **ECCV 2024**.
