@@ -251,7 +251,7 @@ To record the necessary information about the generated motion, a pickle file wi
 - `hint (numpy.ndarray)`: The trajectory for motion control (optional).
 
 <details>
-  <summary><b> 4.1 Create SMPL meshes </b></summary>
+  <summary><b> 5.1 Create SMPL meshes </b></summary>
 
 To create SMPL meshes for a specific pickle file, let's use `assets/example.pkl` as an example:
 
@@ -270,14 +270,14 @@ python fit.py --dir assets/
 </details>
 
 <details>
-  <summary><b> 4.2 Render SMPL meshes </b></summary>
+  <summary><b> 5.2 Render SMPL meshes </b></summary>
 
 Refer to [TEMOS-Rendering motions](https://github.com/Mathux/TEMOS) for blender setup (only **Installation** section). 
 
 We support three rendering modes for SMPL mesh, namely `sequence` (default), `video` and `frame`.
 
 <details>
-  <summary><b> 4.2.1 sequence </b></summary>
+  <summary><b> 5.2.1 sequence </b></summary>
 
 ```
 YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode sequence --num 8
@@ -290,7 +290,7 @@ You will get a rendered image of `num=8` keyframes as shown in `assets/example_m
 </details>
 
 <details>
-  <summary><b> 4.2.2 video </b></summary>
+  <summary><b> 5.2.2 video </b></summary>
 
 ```
 YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode video --fps 20
@@ -303,7 +303,7 @@ You will get a rendered video with `fps=20` as shown in `assets/example_mesh.mp4
 </details>
 
 <details>
-  <summary><b> 4.2.3 frame </b></summary>
+  <summary><b> 5.2.3 frame </b></summary>
 
 ```
 YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode frame --exact_frame 0.5
