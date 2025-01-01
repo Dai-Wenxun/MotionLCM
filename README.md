@@ -28,7 +28,7 @@
 
 ## 🤩 Abstract
 
-> This work introduces MotionLCM, extending controllable motion generation to a real-time level. Existing methods for spatial-temporal control in text-conditioned motion generation suffer from significant runtime inefficiency. To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, building upon the latent diffusion model. By adopting one-step (or few-step) inference, we further improve the runtime efficiency of the motion latent diffusion model for motion generation. To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM and enable explicit control signals (e.g., initial poses) in the vanilla motion space to further provide supervision for the training process. By employing these techniques, our approach can generate human motions with text and control signals in real-time. Experimental results demonstrate the remarkable generation and controlling capabilities of MotionLCM while maintaining real-time runtime efficiency.
+> This work introduces MotionLCM, extending controllable motion generation to a real-time level. Existing methods for spatial-temporal control in text-conditioned motion generation suffer from significant runtime inefficiency. To address this issue, we first propose the motion latent consistency model (MotionLCM) for motion generation, building on the motion latent diffusion model. By adopting one-step (or few-step) inference, we further improve the runtime efficiency of the motion latent diffusion model for motion generation. To ensure effective controllability, we incorporate a motion ControlNet within the latent space of MotionLCM and enable explicit control signals (i.e., initial motions) in the vanilla motion space to further provide supervision for the training process. By employing these techniques, our approach can generate human motions with text and control signals in real-time. Experimental results demonstrate the remarkable generation and controlling capabilities of MotionLCM while maintaining real-time runtime efficiency.
 
 ## 🤼‍♂ Arena
 
@@ -443,32 +443,6 @@ For CLT, we default to using `num_inference_steps=1` and `batch_size=1`. **Do no
 For our default motion control test (i.e., simply run the commands above), it is based on the `pelvis` joint with `density=100`. If you want to obtain complete results, please adjust the testing joint and testing density according to the motion control training tutorial.
 
 </details>
-
-## 📊 Results
-
-We provide the quantitative and qualitative results in the paper. 
-
-<details>
-  <summary><b> Text-to-Motion (quantitative)  </b></summary>
-
-<img src="assets/quantitative_t2m.png" alt="example" width="100%">
-</details>
-
-<details>
-  <summary><b> Text-to-Motion (qualitative)  </b></summary>
-
-TBD
-
-</details>
-
-<details>
-  <summary><b> Motion Control (quantitative)  </b></summary>
-
-TBD
-
-</details>
-
-
 
 ## 🌹 Acknowledgement
 
