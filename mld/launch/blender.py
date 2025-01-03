@@ -3,7 +3,7 @@ import os
 import sys
 from argparse import ArgumentParser
 
-sys.path.append(os.path.expanduser("~/.local/lib/python3.9/site-packages"))
+sys.path.insert(0, os.path.expanduser("~/.local/lib/python3.9/site-packages"))
 
 
 # Monkey patch argparse such that
