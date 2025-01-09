@@ -3,7 +3,7 @@ torch==1.13.1
 gdown
 omegaconf
 rich
-swanlab==0.3.1
+swanlab
 torchmetrics==1.3.2
 scipy==1.11.2
 matplotlib==3.3.4
