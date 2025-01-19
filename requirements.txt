@@ -11,6 +11,7 @@ transformers==4.38.0
 sentence-transformers==2.2.2
 diffusers==0.24.0
 tensorboard==2.15.1
+huggingface_hub==0.25.0
 h5py==3.11.0
 smplx==0.1.28
 chumpy==0.70
