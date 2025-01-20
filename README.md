@@ -460,11 +460,12 @@ We would like to thank the authors of the following repositories for their excel
 If you find this work useful, please consider citing our paper:
 
 ```bash
-@article{motionlcm,
-  title={MotionLCM: Real-time Controllable Motion Generation via Latent Consistency Model},
+@inproceedings{motionlcm,
+  title={Motionlcm: Real-time controllable motion generation via latent consistency model},
   author={Dai, Wenxun and Chen, Ling-Hao and Wang, Jingbo and Liu, Jinpeng and Dai, Bo and Tang, Yansong},
-  journal={arXiv preprint arXiv:2404.19759},
-  year={2024},
+  booktitle={ECCV},
+  pages={390--408},
+  year={2025}
 }
 ```
 
