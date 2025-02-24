@@ -467,6 +467,10 @@ If you find this work useful, please consider citing our paper:
   pages={390--408},
   year={2025}
 }
+@article{motionlcm-v2,
+  title={Real-time Controllable Motion Generation via Latent Consistency Model},
+  author={Dai, Wenxun and Chen, Ling-Hao and Huo, Yufei and Wang, Jingbo and Liu, Jinpeng and Dai, Bo and Tang, Yansong}
+}
 ```
 
 ## 📚 License
