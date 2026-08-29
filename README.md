@@ -258,6 +258,12 @@ To record the necessary information about the generated motion, a pickle file wi
 <details>
   <summary><b> 5.1 Create SMPL meshes </b></summary>
 
+Fitting requires `chumpy`, which is installed separately because its `setup.py` imports `pip` and therefore cannot be built inside pip's PEP 517 build isolation (pip >= 23.1):
+
+```
+pip install --no-build-isolation chumpy==0.70
+```
+
 To create SMPL meshes for a specific pickle file, let's use `assets/example.pkl` as an example:
 
 ```

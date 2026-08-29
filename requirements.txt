@@ -14,6 +14,5 @@ tensorboard==2.15.1
 huggingface_hub==0.25.0
 h5py==3.11.0
 smplx==0.1.28
-chumpy==0.70
 numpy==1.23.1
 natsort==8.4.0
