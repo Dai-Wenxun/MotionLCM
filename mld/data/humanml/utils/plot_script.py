@@ -51,6 +51,9 @@ def plot_3d_motion(save_path: str, joints: np.ndarray, title: str,
     fig = plt.figure(figsize=figsize)
     plt.tight_layout()
     ax = p3.Axes3D(fig)
+    if ax not in fig.axes:
+        # matplotlib >= 3.5 no longer adds the Axes3D to the figure automatically
+        fig.add_axes(ax)
     init()
     MINS = data.min(axis=0).min(axis=0)
     MAXS = data.max(axis=0).max(axis=0)
@@ -70,10 +73,15 @@ def plot_3d_motion(save_path: str, joints: np.ndarray, title: str,
     data[..., 2] -= data[:, 0:1, 2]
 
     def update(index):
-        ax.lines = []
-        ax.collections = []
+        # matplotlib >= 3.7 made ax.lines / ax.collections read-only
+        for artist in list(ax.lines) + list(ax.collections):
+            artist.remove()
         ax.view_init(elev=120, azim=-90)
-        ax.dist = 7.5
+        if hasattr(ax, 'dist'):
+            ax.dist = 7.5
+        else:
+            # matplotlib >= 3.8 removed Axes3D.dist
+            ax.set_box_aspect(None, zoom=10 / 7.5)
         plot_xzPlane(MINS[0] - trajec[index, 0], MAXS[0] - trajec[index, 0], 0, MINS[2] - trajec[index, 1],
                      MAXS[2] - trajec[index, 1])
 

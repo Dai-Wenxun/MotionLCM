@@ -62,6 +62,11 @@ pip install -r requirements.txt
 
 We test our code on Python 3.10.12 and PyTorch 1.13.1.
 
+Two notes on the pinned versions:
+
+- `torch==1.13.1+cu116` ships kernels for `sm_37`-`sm_86` only (no PTX), which covers RTX 3090 / A100 and older. On newer GPUs (RTX 40 series `sm_89`, H100 `sm_90`, RTX 50 series `sm_120`) the install still succeeds, but any CUDA call fails with `no kernel image is available for execution on the device`. Install a `torch` build that matches your GPU instead.
+- `matplotlib==3.3.4` has no wheel for Python 3.10, so pip compiles it from source. That needs a C++ compiler plus network access to the FreeType tarball it bundles, otherwise the install fails with `Failed to download FreeType`. Python 3.9 has prebuilt wheels and skips this step.
+
 </details>
 
 <details>
@@ -152,17 +157,17 @@ MotionLCM
 ├── deps
 │   ├── glove
 │   ├── sentence-t5-large
-|   ├── smpl_models
+│   ├── smpl_models
 │   └── t2m
 ├── experiments_control
 │   ├── spatial
 │   │   └── motionlcm_humanml
 │   │       ├── motionlcm_humanml_s_all.ckpt
 │   │       └── motionlcm_humanml_s_pelvis.ckpt
-│   └── temproal
-│   │   └── motionlcm_humanml
-│   │       ├── motionlcm_humanml_t_v1.ckpt
-│   │       └── motionlcm_humanml_t.ckpt
+│   └── temporal
+│       └── motionlcm_humanml
+│           ├── motionlcm_humanml_t_v1.ckpt
+│           └── motionlcm_humanml_t.ckpt
 ├── experiments_recons
 │   └── vae_humanml
 │       └── vae_humanml.ckpt
@@ -201,7 +206,7 @@ python demo.py --cfg configs/vae.yaml
 
 
 <details>
-  <summary><b> 2. Text-to-Motion (using provided prompts and lengths in `demo/example.txt`) </b></summary>
+  <summary><b> 2. Text-to-Motion (using provided prompts and lengths in `assets/example.txt`) </b></summary>
 
 ```
 python demo.py --cfg configs/mld_t2m.yaml --example assets/example.txt

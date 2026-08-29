@@ -2,7 +2,7 @@ mkdir -p deps/
 cd deps/
 
 echo -e "Downloading smpl models"
-gdown --fuzzy https://drive.google.com/file/d/1J2pTxrar_q689Du5r3jES343fZUmCs_y/view?usp=sharing
+gdown 1J2pTxrar_q689Du5r3jES343fZUmCs_y -O smpl_models.zip
 rm -rf smpl_models
 
 unzip smpl_models.zip

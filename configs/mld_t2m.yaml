@@ -55,7 +55,6 @@ TEST:
 
 DATASET:
   NAME: 'humanml3d'
-  SMPL_PATH: './deps/smpl'
   WORD_VERTILIZER_PATH: './deps/glove/'
   HUMANML3D:
     FRAME_RATE: 20.0

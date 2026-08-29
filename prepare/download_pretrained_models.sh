@@ -1,13 +1,13 @@
 echo -e "Downloading experiments_recons!"
-gdown --fuzzy https://drive.google.com/file/d/15zFDitcOLhjbQ0CaOoM-QNKQUeyJw-Om/view?usp=sharing
+gdown 15zFDitcOLhjbQ0CaOoM-QNKQUeyJw-Om -O experiments_recons.zip
 unzip experiments_recons.zip
 
 echo -e "Downloading experiments_t2m!"
-gdown --fuzzy https://drive.google.com/file/d/1U7homKobR2gaDLfL5flS3N0g7e0a_AQd/view?usp=sharing
+gdown 1U7homKobR2gaDLfL5flS3N0g7e0a_AQd -O experiments_t2m.zip
 unzip experiments_t2m.zip
 
 echo -e "Downloading experiments_control!"
-gdown --fuzzy https://drive.google.com/file/d/1o6oFdH5dgQJNB5J2rDGKCMw3FDr9gUkW/view?usp=sharing
+gdown 1o6oFdH5dgQJNB5J2rDGKCMw3FDr9gUkW -O experiments_control.zip
 unzip experiments_control.zip
 
 rm experiments_recons.zip
