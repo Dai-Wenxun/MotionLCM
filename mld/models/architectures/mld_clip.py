@@ -65,7 +65,7 @@ class MldTextEncoder(nn.Module):
                 **text_inputs.to(self.text_model.device)).last_hidden_state
         elif self.name == 't5':
             text_embeddings = self.text_model.encode(texts, show_progress_bar=False, convert_to_tensor=True, batch_size=len(texts))
-            text_embeddings = text_embeddings.unsqueeze(1)
+            text_embeddings = text_embeddings.clone().unsqueeze(1)
         else:
             raise NotImplementedError(f"Model {self.name} not implemented")
 
