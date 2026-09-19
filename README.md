@@ -290,12 +290,12 @@ Download and extract [Blender 2.93.18 (Linux x64)](https://download.blender.org/
 ```bash
 BLENDER_PATH=/absolute/path/to/blender-2.93.18-linux-x64
 "$BLENDER_PATH/2.93/python/bin/python3.9" -m ensurepip --upgrade
-"$BLENDER_PATH/2.93/python/bin/python3.9" -m pip install --user numpy==2.0.2 matplotlib==3.9.4 moviepy==1.0.3
+"$BLENDER_PATH/2.93/python/bin/python3.9" -m pip install --user numpy==1.26.4 matplotlib==3.9.4 moviepy==1.0.3
 "$BLENDER_PATH/blender" --background --python-use-system-env --python-exit-code 1 \
   --python-expr "import bpy, numpy, matplotlib, moviepy.editor; print(bpy.app.version_string)"
 ```
 
-The check should print `2.93.18` without import errors. MoviePy 1.0.3 provides the required `moviepy.editor`; its dependencies are installed automatically.
+The check should print `2.93.18` without import errors. MoviePy 1.0.3 provides the required `moviepy.editor`; its dependencies are installed automatically. Keep NumPy below 2 to avoid MoviePy 1.x frame-timing issues.
 
 Run the following commands from the MotionLCM project directory. Three rendering modes are supported: `sequence` (default), `video` and `frame`.
 

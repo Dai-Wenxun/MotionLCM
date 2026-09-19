@@ -1,6 +1,7 @@
 import moviepy.editor as mp
 import os
 import imageio
+import numpy as np
 
 
 def mask_png(frames):
@@ -41,7 +42,8 @@ class Video:
 
         video = mp.ImageSequenceClip(frames, fps=fps)
         self.video = video
-        self.duration = video.duration
+        # Keep MoviePy's exclusive endpoint from rounding up to an extra frame.
+        self.duration = np.nextafter(len(frames) / fps, 0.0)
 
     def add_text(self, text):
         # needs ImageMagick
