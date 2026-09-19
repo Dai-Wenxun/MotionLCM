@@ -64,7 +64,7 @@ We test our code on Python 3.10.12 and PyTorch 1.13.1.
 
 Two notes on the pinned versions:
 
-- `torch==1.13.1+cu116` ships kernels for `sm_37`-`sm_86` only (no PTX), which covers RTX 3090 / A100 and older. On newer GPUs (RTX 40 series `sm_89`, H100 `sm_90`, RTX 50 series `sm_120`) the install still succeeds, but any CUDA call fails with `no kernel image is available for execution on the device`. Install a `torch` build that matches your GPU instead.
+- The original setup was tested on an RTX 3090. Newer GPUs may require updated PyTorch/CUDA versions.
 - `matplotlib==3.3.4` has no wheel for Python 3.10, so pip compiles it from source. That needs a C++ compiler plus network access to the FreeType tarball it bundles, otherwise the install fails with `Failed to download FreeType`. Python 3.9 has prebuilt wheels and skips this step.
 
 </details>
@@ -258,7 +258,7 @@ To record the necessary information about the generated motion, a pickle file wi
 <details>
   <summary><b> 5.1 Create SMPL meshes </b></summary>
 
-Fitting requires `chumpy`, which is installed separately because its `setup.py` imports `pip` and therefore cannot be built inside pip's PEP 517 build isolation (pip >= 23.1):
+Loading the legacy SMPL model requires `chumpy`; disable build isolation for its legacy installer:
 
 ```
 pip install --no-build-isolation chumpy==0.70
@@ -283,15 +283,27 @@ python fit.py --dir assets/
 <details>
   <summary><b> 5.2 Render SMPL meshes </b></summary>
 
-Refer to [TEMOS-Rendering motions](https://github.com/Mathux/TEMOS) for blender setup (only **Installation** section). 
+On Ubuntu/Debian, install Blender's X11/OpenGL runtime libraries (also needed for background rendering): `sudo apt install libgl1 libxi6 libxrender1 libxfixes3 libxxf86vm1`.
 
-We support three rendering modes for SMPL mesh, namely `sequence` (default), `video` and `frame`.
+Download and extract [Blender 2.93.18 (Linux x64)](https://download.blender.org/release/Blender2.93/blender-2.93.18-linux-x64.tar.xz). Set `BLENDER_PATH` to the extracted directory and install the rendering dependencies into its bundled **Python 3.9**, separately from the MotionLCM environment:
+
+```bash
+BLENDER_PATH=/absolute/path/to/blender-2.93.18-linux-x64
+"$BLENDER_PATH/2.93/python/bin/python3.9" -m ensurepip --upgrade
+"$BLENDER_PATH/2.93/python/bin/python3.9" -m pip install --user numpy==2.0.2 matplotlib==3.9.4 moviepy==1.0.3
+"$BLENDER_PATH/blender" --background --python-use-system-env --python-exit-code 1 \
+  --python-expr "import bpy, numpy, matplotlib, moviepy.editor; print(bpy.app.version_string)"
+```
+
+The check should print `2.93.18` without import errors. MoviePy 1.0.3 provides the required `moviepy.editor`; its dependencies are installed automatically.
+
+Run the following commands from the MotionLCM project directory. Three rendering modes are supported: `sequence` (default), `video` and `frame`.
 
 <details>
   <summary><b> 5.2.1 sequence </b></summary>
 
 ```
-YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode sequence --num 8
+"$BLENDER_PATH/blender" --background --python-use-system-env --python render.py -- --pkl assets/example_mesh.pkl --mode sequence --num 8
 ```
 
 You will get a rendered image of `num=8` keyframes as shown in `assets/example_mesh.png`. The darker the color, the later the time.
@@ -304,7 +316,7 @@ You will get a rendered image of `num=8` keyframes as shown in `assets/example_m
   <summary><b> 5.2.2 video </b></summary>
 
 ```
-YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode video --fps 20
+"$BLENDER_PATH/blender" --background --python-use-system-env --python render.py -- --pkl assets/example_mesh.pkl --mode video --fps 20
 ```
 
 You will get a rendered video with `fps=20` as shown in `assets/example_mesh.mp4`.
@@ -317,7 +329,7 @@ You will get a rendered video with `fps=20` as shown in `assets/example_mesh.mp4
   <summary><b> 5.2.3 frame </b></summary>
 
 ```
-YOUR_BLENDER_PATH/blender --background --python render.py -- --pkl assets/example_mesh.pkl --mode frame --exact_frame 0.5
+"$BLENDER_PATH/blender" --background --python-use-system-env --python render.py -- --pkl assets/example_mesh.pkl --mode frame --exact_frame 0.5
 ```
 
 You will get a rendered image of the keyframe at `exact_frame=0.5` (i.e., the middle frame) as shown in `assets/example_mesh_0.5.png`.

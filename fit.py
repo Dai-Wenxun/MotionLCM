@@ -10,6 +10,7 @@ import smplx
 import torch
 
 from mld.transforms.joints2rots import config
+from mld.transforms.joints2rots.compat import legacy_numpy_aliases
 from mld.transforms.joints2rots.smplify import SMPLify3D
 
 parser = argparse.ArgumentParser()
@@ -48,13 +49,14 @@ for path in paths:
     # load predefined something
     device = torch.device("cuda:" + str(opt.gpu_ids) if opt.cuda else "cpu")
     print(config.SMPL_MODEL_DIR)
-    smplxmodel = smplx.create(
-        config.SMPL_MODEL_DIR,
-        model_type="smpl",
-        gender="neutral",
-        ext="pkl",
-        batch_size=joints.shape[0],
-    ).to(device)
+    with legacy_numpy_aliases():
+        smplxmodel = smplx.create(
+            config.SMPL_MODEL_DIR,
+            model_type="smpl",
+            gender="neutral",
+            ext="pkl",
+            batch_size=joints.shape[0],
+        ).to(device)
 
     # load the mean pose as original
     smpl_mean_file = config.SMPL_MEAN_FILE
