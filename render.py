@@ -28,11 +28,8 @@ def parse_args():
     parser.add_argument("--always_on_floor", action="store_true", help='put all the body on the floor (not recommended)')
     parser.add_argument("--gt", type=str, default=False, help='green for gt, otherwise orange')
     parser.add_argument("--fps", type=int, default=20, help="the frame rate of the rendered video")
-    persistent_group = parser.add_mutually_exclusive_group()
-    persistent_group.add_argument("--persistent_data", action="store_true", default=True,
-                                  help="retain Cycles data between video frames (default; uses more memory)")
-    persistent_group.add_argument("--no_persistent_data", dest="persistent_data", action="store_false",
-                                  help="disable Cycles data retention between video frames")
+    parser.add_argument("--no_persistent_data", dest="persistent_data", action="store_false", default=True,
+                        help="disable Cycles data retention between video frames")
     parser.add_argument("--num", type=int, default=8, help="the number of frames rendered in 'sequence' mode")
     parser.add_argument("--exact_frame", type=float, default=0.5, help="the frame id selected under 'frame' mode ([0, 1])")
     cfg = parser.parse_args()
