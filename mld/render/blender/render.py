@@ -26,7 +26,8 @@ def render_current_frame(path):
 
 def render(npydata, trajectory, path, mode, faces_path, gt=False,
            exact_frame=None, num=8, always_on_floor=False, denoising=True,
-           oldrender=True, res="high", accelerator='gpu', device=[0], fps=20):
+           oldrender=True, res="high", accelerator='gpu', device=[0], fps=20,
+           persistent_data=False):
 
     if mode == 'video':
         if always_on_floor:
@@ -64,6 +65,8 @@ def render(npydata, trajectory, path, mode, faces_path, gt=False,
 
     # Setup the scene (lights / render engine / resolution etc)
     setup_scene(res=res, denoising=denoising, oldrender=oldrender, accelerator=accelerator, device=device)
+    # Reuse Cycles data between video frames instead of rebuilding it each time.
+    bpy.context.scene.render.use_persistent_data = persistent_data and mode == "video"
 
     # remove X% of beginning and end
     # as it is almost always static
