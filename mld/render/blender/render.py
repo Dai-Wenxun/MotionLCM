@@ -27,7 +27,7 @@ def render_current_frame(path):
 def render(npydata, trajectory, path, mode, faces_path, gt=False,
            exact_frame=None, num=8, always_on_floor=False, denoising=True,
            oldrender=True, res="high", accelerator='gpu', device=[0], fps=20,
-           persistent_data=False):
+           persistent_data=True):
 
     if mode == 'video':
         if always_on_floor:
